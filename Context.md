@@ -12,7 +12,7 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 
 - **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
 - **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime. Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run as a single GitHub Actions job on every PR touching `**/SKILL.md`.
-- **Walking skeleton proven**: one real skill, **`nh-commit`**, was authored end-to-end and merged (PR #1) through the full author → lint → CI → merge loop — the loop is proven, not just specified.
+- **Walking skeleton proven, and proven repeatable**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) have both been authored end-to-end and merged through the full author → lint → CI → merge loop — the loop works a second time, not just once.
 - **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
 - **No dedicated test framework.** The validator script is the test suite for this repo's own tooling, backed by fixture-based self-tests using Node's built-in `node:test` (no Jest/Vitest/pytest).
 - **License: Apache-2.0**, decided once at the Not-Humans-Lab system level and applied identically across all three sibling projects for enterprise-clearable, patent-safe consistency (see `../Not-Humans-Lab/decisions.md`).
@@ -38,14 +38,15 @@ No manifest, no packaging step, no build. See `AGENTS.md`'s Directory Map for th
 Grow the skill catalog gradually, one skill at a time, proving the author-to-merge loop each time before adding the next. **Do not overbuild tooling now.** Per the earlier research's own revisit threshold, tooling beyond the current single validator + CI job is only reconsidered once the catalog crosses roughly **30-40 skills**, or once **outside contributors** actually show up (a manifest, a registry, contributor-facing docs, or a packaging step become justifiable at that point — not before). Until then, the plan is:
 
 1. ~~Finish the `nh-commit` walking skeleton (Phase 2) — prove the full loop once.~~ Done (PR #1, merged).
-2. Add skills one at a time, each getting the same validator + CI + (where applicable) security-review treatment.
-3. Revisit tooling only at the ~30-40 skill mark or on outside contribution — not on a calendar, not speculatively.
+2. ~~Add a second skill, prove the loop is repeatable.~~ Done (`nh-style-markdown`, PR #2, merged).
+3. Continue adding skills one at a time, each getting the same validator + CI + (where applicable) security-review treatment.
+4. Revisit tooling only at the ~30-40 skill mark or on outside contribution — not on a calendar, not speculatively.
 
 nh-deck and daily-dose have completed their own Phases 3-6 — see their own repos/Context.md files for their state; this repo's roadmap only concerns nh-skills' own next skill additions.
 
 ## Open risks
 
-- **Only one skill (`nh-commit`) has gone through the loop so far.** The author-to-merge loop is proven once, not yet proven as a repeatable habit — the real test is whether it stays this smooth for the 2nd, 5th, and 10th skill.
+- **Two skills have gone through the loop so far.** The author-to-merge loop is proven repeatable once (2nd skill went as smoothly as the 1st) — the real test now is whether it holds at the 5th and 10th skill too.
 - **The validator's hard-fail/soft-warn line has not yet been tested against a real adversarial skill submission** (e.g. a skill deliberately shelling out) — the security-review step in `AGENTS.md` is specified but not yet exercised in practice.
 - **No outside contributors exist yet**, so the "revisit at 30-40 skills or outside contributors" threshold is untested — the actual pain points that would justify more tooling are still hypothetical.
 
