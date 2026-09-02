@@ -2,8 +2,8 @@
 
 A literal, navigable tour of this repo only. This does not cover nh-deck,
 daily-dose, or Not-Humans-Lab — each is its own repo/doc set. Reflects the
-Phase 2 walking-skeleton layout; entries marked "(planned)" don't exist on
-disk yet but are the immediate next thing to add.
+shipped Phase 1+2 layout — the walking skeleton is complete and live at
+github.com/sairam0424/nh-skills with green CI, not a plan.
 
 ## Bird's-eye view
 
@@ -13,22 +13,24 @@ nh-skills/
 ├── tech.md                         tech stack inventory
 ├── architecture.md                 this project's own architecture doc
 ├── codebase_map.md                 this file
-├── package.json                    (planned) declares js-yaml devDependency + npm scripts
-├── <skill-name>/                   one directory per skill (e.g. nh-commit/)
-│   └── SKILL.md                    the skill's content: YAML frontmatter + Markdown body
-│   └── scripts/ | references/ | assets/   (optional, per-skill)
+├── agent_learning.md               corrections register (see also ../Not-Humans-Lab/agent_learning.md)
+├── anti-patterns.md                 recurring-bad-pattern catalog (empty so far)
+├── Branches.md                      branch/commit/PR strategy, copied verbatim from Not-Humans-Lab
+├── package.json                    declares js-yaml devDependency + npm scripts (validate, test)
+├── nh-commit/                       the one shipped skill (merged via PR #1)
+│   └── SKILL.md                    conventional-commit formatting rules
 ├── scripts/
-│   └── validate-skills.mjs         (planned) the validator — the only tooling layer
+│   └── validate-skills.mjs         the validator — the only tooling layer
 ├── fixtures/
-│   ├── valid-skill/                 (planned) known-good SKILL.md sample
+│   ├── valid-skill/                 known-good SKILL.md sample
 │   │   └── SKILL.md
-│   └── invalid-skill/               (planned) known-bad SKILL.md sample(s)
+│   └── invalid-skill/               known-bad SKILL.md sample
 │       └── SKILL.md
 ├── test/
-│   └── validate-skills.test.mjs     (planned) node:test self-tests for the validator
+│   └── validate-skills.test.mjs     node:test self-tests for the validator (3 tests, passing)
 └── .github/
     └── workflows/
-        └── validate-skills.yml      (planned) CI job — runs on every PR touching **/SKILL.md
+        └── validate-skills.yml      CI job — runs on every PR touching **/SKILL.md (green)
 ```
 
 ## Directory-by-directory
