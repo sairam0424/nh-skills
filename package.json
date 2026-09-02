@@ -1,0 +1,22 @@
+{
+  "name": "nh-skills",
+  "version": "0.1.0",
+  "description": "A personal, curated collection of Claude Code Agent Skills (SKILL.md files).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-skills.mjs",
+    "test": "node --test 'test/**/*.test.mjs'"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sairam0424/nh-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sairam0424/nh-skills/issues"
+  },
+  "homepage": "https://github.com/sairam0424/nh-skills#readme"
+}

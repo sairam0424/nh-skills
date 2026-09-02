@@ -1,0 +1,32 @@
+name: Validate Skills
+
+on:
+  pull_request:
+    paths:
+      - "**/SKILL.md"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/SKILL.md"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run skill validator
+        run: npm run validate
+
+      - name: Run validator self-tests
+        run: npm test
