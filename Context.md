@@ -11,8 +11,9 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 ## Current state (as of 2026-09-02)
 
 - **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
-- **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime. Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run as a single GitHub Actions job on every PR touching `**/SKILL.md`.
+- **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the one exception is the optional Workflow script bundled with `nh-breaker`, which runs only inside the Claude Code Workflow tool). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run as a single GitHub Actions job on every PR touching `**/SKILL.md`.
 - **Walking skeleton proven, and proven repeatable**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) have both been authored end-to-end and merged through the full author → lint → CI → merge loop — the loop works a second time, not just once.
+- **Third skill in review, not merged: `nh-breaker`** (branch `feat/skills-nh-breaker`). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-breaker/references/loop-design.md`.
 - **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
 - **No dedicated test framework.** The validator script is the test suite for this repo's own tooling, backed by fixture-based self-tests using Node's built-in `node:test` (no Jest/Vitest/pytest).
 - **License: Apache-2.0**, decided once at the Not-Humans-Lab system level and applied identically across all three sibling projects for enterprise-clearable, patent-safe consistency (see `../Not-Humans-Lab/decisions.md`).
@@ -21,7 +22,7 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 
 Two layers only:
 
-1. **The skill artifacts** — `<skill-name>/SKILL.md` (+ optional `scripts/`, `references/`, `assets/`), zero runtime, installable by directory structure alone.
+1. **The skill artifacts** — `<skill-name>/SKILL.md` (+ optional `scripts/`, `references/`, `assets/`), no runtime of its own, installable by directory structure alone.
 2. **The validator** — `scripts/validate-skills.mjs`, a single dependency-light Node script that lints every `SKILL.md`'s frontmatter schema and structural conventions, wired into CI via one GitHub Actions job on PRs touching `**/SKILL.md`.
 
 No manifest, no packaging step, no build. See `AGENTS.md`'s Directory Map for the concrete file layout. See `../Not-Humans-Lab/architecture.md` for how nh-skills fits into the three-project system (C4 Level 1 only — this repo owns its own internals).
@@ -47,8 +48,9 @@ nh-deck and daily-dose have completed their own Phases 3-6 — see their own rep
 ## Open risks
 
 - **Two skills have gone through the loop so far.** The author-to-merge loop is proven repeatable once (2nd skill went as smoothly as the 1st) — the real test now is whether it holds at the 5th and 10th skill too.
-- **The validator's hard-fail/soft-warn line has not yet been tested against a real adversarial skill submission** (e.g. a skill deliberately shelling out) — the security-review step in `AGENTS.md` is specified but not yet exercised in practice.
+- **The security-review step has been exercised once (on `nh-breaker`), and the validator cannot judge intent.** The review found real issues that `npm run validate` could not see, which confirms the step is load-bearing. It was run by an independent reviewer agent, not a human, so it is a lead-generator, not a sign-off.
+- **The validator only reads `SKILL.md` files.** A bundled script such as `nh-breaker/scripts/breaker-loop.js` has no repo check; its only guards are a syntax check, a fixture run and the review, all described in the skill's own references. If more skills ship scripts, that gap needs a decision (it is not yet a reason to add tooling).
 - **No outside contributors exist yet**, so the "revisit at 30-40 skills or outside contributors" threshold is untested — the actual pain points that would justify more tooling are still hypothetical.
 
 ---
-*Last updated: 2026-09-02. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*
+*Last updated: 2026-11-02. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*
