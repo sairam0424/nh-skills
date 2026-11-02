@@ -101,7 +101,12 @@ export function splitFrontmatter(content) {
       error: 'File must start with a "---" frontmatter delimiter',
     };
   }
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  // The first "---" line after the opener closes the block. The lazy `??`
+  // tries the closer on the very next line first: that line has no newline
+  // before it (the opener consumed it), so without this branch an empty block
+  // ("---\n---") would never close and the scan would run on to a later "---",
+  // leaving a stray "---" as the first line of the captured frontmatter.
+  const match = content.match(/^---\r?\n(?:([\s\S]*?)\r?\n)??---\r?\n?([\s\S]*)$/);
   if (!match) {
     return {
       frontmatterText: null,
@@ -109,7 +114,7 @@ export function splitFrontmatter(content) {
       error: 'Could not find a closing "---" frontmatter delimiter',
     };
   }
-  return { frontmatterText: match[1], body: match[2], error: null };
+  return { frontmatterText: match[1] ?? "", body: match[2], error: null };
 }
 
 /**
