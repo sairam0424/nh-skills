@@ -7,7 +7,7 @@
 // Exit code: non-zero if any hard-fail finding exists. Soft warnings never
 // affect the exit code.
 
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
@@ -41,22 +41,52 @@ const INLINE_CODE_PATH_PATTERN = /`([\w.\-]+(?:\/[\w.\-]+)+\.[A-Za-z0-9]+)`/g;
 const MARKDOWN_LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 
 /**
- * Recursively find every SKILL.md file under rootDir, excluding
- * node_modules and .git.
+ * Classify a directory entry as "directory", "file" or "other". Dirent reports
+ * a symlink as none of these, so a symlink is resolved with statSync to the
+ * type of its target. A link that cannot be resolved (dangling or looping) is
+ * "file" when it is named SKILL.md, so validateSkillFile reports it instead of
+ * the scan skipping it, and "other" for any other name.
  */
-export function findSkillFiles(rootDir) {
+function classifyEntry(entry, fullPath) {
+  if (entry.isDirectory()) return "directory";
+  if (entry.isFile()) return "file";
+  if (!entry.isSymbolicLink()) return "other";
+  try {
+    const target = statSync(fullPath);
+    if (target.isDirectory()) return "directory";
+    if (target.isFile()) return "file";
+    return "other";
+  } catch {
+    return entry.name === "SKILL.md" ? "file" : "other";
+  }
+}
+
+function walkForSkillFiles(dir, ancestorRealPaths) {
   const results = [];
-  const entries = readdirSync(rootDir, { withFileTypes: true });
-  for (const entry of entries) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (IGNORED_DIRS.has(entry.name)) continue;
-    const fullPath = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...findSkillFiles(fullPath));
-    } else if (entry.isFile() && entry.name === "SKILL.md") {
+    const fullPath = path.join(dir, entry.name);
+    const kind = classifyEntry(entry, fullPath);
+    if (kind === "directory") {
+      const realPath = realpathSync(fullPath);
+      // A link back to a directory already being scanned would recurse
+      // forever; every skill below it is already covered by the outer scan.
+      if (ancestorRealPaths.has(realPath)) continue;
+      results.push(...walkForSkillFiles(fullPath, new Set([...ancestorRealPaths, realPath])));
+    } else if (kind === "file" && entry.name === "SKILL.md") {
       results.push(fullPath);
     }
   }
   return results;
+}
+
+/**
+ * Recursively find every SKILL.md file under rootDir, excluding
+ * node_modules and .git. Symlinked SKILL.md files and symlinked skill
+ * directories are followed, so they are validated like any other skill.
+ */
+export function findSkillFiles(rootDir) {
+  return walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
 }
 
 /**
@@ -270,7 +300,14 @@ export function validateSkillFile(filePath, rootDir) {
   const hardFails = [];
   const softWarns = [];
 
-  const content = readFileSync(filePath, "utf8");
+  let content;
+  try {
+    content = readFileSync(filePath, "utf8");
+  } catch (err) {
+    // E.g. a SKILL.md symlink whose target is missing: report it, don't crash.
+    hardFails.push({ file: relPath, rule: "unreadable", message: `Cannot read SKILL.md: ${err.message}` });
+    return { hardFails, softWarns, name: null, folderName };
+  }
   const { frontmatterText, body, error: delimiterError } = splitFrontmatter(content);
   if (delimiterError) {
     hardFails.push({ file: relPath, rule: "frontmatter-delimiters", message: delimiterError });
