@@ -26,7 +26,10 @@ const RESERVED_NAMES = new Set(["claude", "anthropic", "skill", "skills"]);
 
 const DESCRIPTION_MAX_LENGTH = 1024;
 const DESCRIPTION_WARN_LENGTH = 900;
-const XML_TAG_PATTERN = /<\/?[a-zA-Z][a-zA-Z0-9-]*(\s[^<>]*)?>/;
+// Tag names follow the XML Name production: a letter or "_" first, then
+// letters, digits, "_", ":", "." or "-". The optional "/" before ">" covers
+// self-closing tags with no space before the slash, e.g. "<br/>".
+const XML_TAG_PATTERN = /<\/?[a-zA-Z_][a-zA-Z0-9_:.-]*(\s[^<>]*)?\/?>/;
 const WHEN_TO_USE_PATTERN = /\buse\s+(this\s+)?(skill\s+)?when\b|\bwhen\s+to\s+use\b/i;
 
 const BODY_LINE_WARN_THRESHOLD = 500;
