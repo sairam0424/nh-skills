@@ -81,12 +81,42 @@ function walkForSkillFiles(dir, ancestorRealPaths) {
 }
 
 /**
+ * Collapse paths that reach the same SKILL.md file (for example a skill and a
+ * sibling symlink alias to its folder) into one, so a single skill is neither
+ * counted twice nor reported as a duplicate of itself. The path kept for each
+ * file is the one that does not pass through a symlink; failing that, the
+ * alphabetically first, so the report does not depend on directory order. A
+ * path that cannot be resolved (a dangling or looping link) is kept as is, so
+ * validateSkillFile still reports it.
+ */
+function dedupeByRealFile(filePaths, rootDir) {
+  const rootRealPath = realpathSync(rootDir);
+  const keptByRealFile = new Map();
+  for (const filePath of filePaths) {
+    let realFile;
+    try {
+      realFile = realpathSync(filePath);
+    } catch {
+      realFile = filePath;
+    }
+    const isDirect = realFile === path.join(rootRealPath, path.relative(rootDir, filePath));
+    const kept = keptByRealFile.get(realFile);
+    const replacesKept =
+      kept && (isDirect !== kept.isDirect ? isDirect : filePath < kept.filePath);
+    if (!kept || replacesKept) keptByRealFile.set(realFile, { filePath, isDirect });
+  }
+  return [...keptByRealFile.values()].map(({ filePath }) => filePath);
+}
+
+/**
  * Recursively find every SKILL.md file under rootDir, excluding
  * node_modules and .git. Symlinked SKILL.md files and symlinked skill
- * directories are followed, so they are validated like any other skill.
+ * directories are followed, so they are validated like any other skill. A
+ * skill reachable through more than one path is returned once.
  */
 export function findSkillFiles(rootDir) {
-  return walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
+  const found = walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
+  return dedupeByRealFile(found, rootDir);
 }
 
 /**
