@@ -504,5 +504,8 @@ function isMainModule() {
 
 if (isMainModule()) {
   const rootDirArg = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
-  process.exit(main(rootDirArg));
+  // Set the exit code and let node exit on its own. process.exit() would stop
+  // the process while a large report is still queued on a piped stdout (CI log
+  // collector, `| tee`), silently dropping everything past the first pipe buffer.
+  process.exitCode = main(rootDirArg);
 }
