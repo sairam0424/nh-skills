@@ -9,7 +9,7 @@
     "test": "node --test"
   },
   "devDependencies": {
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^5.5.0"
   },
   "repository": {
     "type": "git",
