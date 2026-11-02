@@ -7,7 +7,7 @@
 // Exit code: non-zero if any hard-fail finding exists. Soft warnings never
 // affect the exit code.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
@@ -381,8 +381,22 @@ export function main(rootDir = process.cwd()) {
   return result.hardFails.length === 0 ? 0 : 1;
 }
 
+/**
+ * True when this file is the script node was started with. Node resolves
+ * import.meta.url to the real path, so argv[1] must be resolved the same way or
+ * a symlinked invocation path would skip main() and exit 0 without a report.
+ */
 function isMainModule() {
-  return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const modulePath = fileURLToPath(import.meta.url);
+  try {
+    return realpathSync(entry) === realpathSync(modulePath);
+  } catch {
+    // An entry path that cannot be resolved on disk cannot be this file; fall
+    // back to the plain path comparison.
+    return path.resolve(entry) === modulePath;
+  }
 }
 
 if (isMainModule()) {
