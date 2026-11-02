@@ -1,6 +1,6 @@
 # nh-skills
 
-A personal, curated collection of [Claude Code Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) — self-contained `SKILL.md` files that teach Claude Code how to perform a specific task well. It is one of three sibling projects under the [Not-Humans-Lab](../Not-Humans-Lab/) umbrella (alongside the planned `nh-deck` and `daily-dose`), and it is this author's own take on the pattern popularized by [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills). Every skill here is pure Markdown + YAML frontmatter — no runtime, no build step, no packaging tool required to use it. The only tooling in this repo is a small validator that lints skill structure in CI.
+A personal, curated collection of [Claude Code Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) — self-contained `SKILL.md` files that teach Claude Code how to perform a specific task well. It is one of three sibling projects under the [Not-Humans-Lab](../Not-Humans-Lab/) umbrella (alongside the planned `nh-deck` and `daily-dose`), and it is this author's own take on the pattern popularized by [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills). Skills here are Markdown + YAML frontmatter with no build step and no packaging tool required to use them; a skill may bundle optional scripts (`nh-breaker` ships one Claude Code Workflow script, which runs only inside that tool). The only tooling in this repo is a small validator that lints skill structure in CI.
 
 ## Installing a skill
 
@@ -47,6 +47,7 @@ This is a personal collection rather than a large open-source project, so there'
 | Skill | Description |
 |---|---|
 | `nh-commit` | Strict git commit message formatting |
+| `nh-breaker` | Bounded breaker loop: adversarial agents try to break code you own, each break needs a failing reproducer, and fixes are checked by agents against your test command in a throwaway worktree; final proof is a manual re-run, and a sandbox is advised |
 
 ## License
 
