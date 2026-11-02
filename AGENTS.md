@@ -45,7 +45,7 @@ There is no build step (no compilation, no bundling — the skill artifacts ship
   This is the required command before proposing any skill-related change as done. It runs `scripts/validate-skills.mjs` against every `**/SKILL.md` in the repo.
 - **Run the validator's own self-tests**: `npm test`
   Fixture-based tests for the validator script itself, using Node's built-in `node:test` (no Jest/Vitest/pytest — see `../Not-Humans-Lab/TESTING.md` for why this project deviates from the workspace's usual test-framework pattern: the validator script is the entire test surface here).
-- **CI**: a single GitHub Actions job runs `npm run validate` on every PR that touches `**/SKILL.md`. There is no separate CI job for anything else at this project's current size.
+- **CI**: `validate-skills.yml` runs `npm ci`, `npm audit --audit-level=high`, `npm run validate` and `npm test` on PRs and pushes to `main` that touch skills, the validator, its tests or fixtures, the package files, or the workflow itself. `gitleaks.yml` runs a secret scan on every PR and push to `main`. Dependabot proposes weekly npm and GitHub Actions updates. Every third-party action is pinned to a full commit SHA that was checked against its upstream tag, and workflow token permissions are read-only. CodeQL is deliberately not enabled: this repository is private without code scanning, so it would fail on upload (revisit if the repository becomes public).
 
 ## Code Style
 
