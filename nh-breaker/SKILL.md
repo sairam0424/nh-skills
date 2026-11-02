@@ -56,7 +56,7 @@ Call the Workflow tool with the [loop script](scripts/breaker-loop.js) from this
 }
 ```
 
-Leave verifierModel unset unless the user wants a different model family for the verifier and the account allows it; the script probes it first and stops early if it is refused. The loop is slow and uses many agents, so tell the user the rough scale before launching.
+Leave verifierModel unset unless the user wants a different model family for the verifier and the account allows it; the script probes it first and stops early if it is refused. The loop is slow and uses many agents, so tell the user the scale before launching. Measured so far: about 0.8M subagent tokens per fixed finding, all in (2.4M tokens and 14 minutes for 3 fixes on a toy project; 6.2M tokens, 45 agents and 76 minutes for 8 fixes in two rounds on a real 350-line module). The defaults of 3 rounds and 6 findings per round could therefore reach 18 fixes and roughly 14M tokens. Give the user the estimate, prefer smaller maxRounds and maxFindingsPerRound, and ask for a token budget; the loop checks it at the start of each round.
 
 If the Workflow tool is unavailable, follow the same phases by hand with fresh, non-fork subagents: one breaker per lens writing reproducers, a confirmer that runs each twice, one fixer at a time, a verifier that runs the commands in the judge protocol, and a final judge run. Keep the same caps. Read [the loop design](references/loop-design.md) for the roles and why they are separate.
 

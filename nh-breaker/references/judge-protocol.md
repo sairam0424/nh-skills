@@ -13,6 +13,8 @@ A command that the project already documents and that:
 
 Use the project's own command exactly as documented (for example the test script in its manifest). Do not invent a narrower one. Do not pipe it into another program, add flags that narrow it, or add "always succeed" suffixes: the tool's own exit status is the evidence. The script screens for the obvious violations (pipes, semicolons, a background ampersand, tee, and flags such as bail or ignore) as a best effort only; the user's confirmation of the exact command in Step 1 is the real control.
 
+Check that the command can see new tests. Some test scripts name specific files, for example a script that passes one test file to the runner. A regression test the fixer adds in another file is then never run, the test count never rises, and every fix is rejected. In that case use the runner's own discovery form of the same command, which runs the same tests plus new ones, confirm that its baseline count equals the documented command's, and tell the user in the contract. A real run found this only after the contract was confirmed, so read the test script before launching.
+
 If the project has no such command, run in lead-only mode (set fixEnabled to false): breakers and confirmers still run, so you get proven breaks, but nothing is fixed and nothing is claimed as fixed.
 
 ## The protected set
