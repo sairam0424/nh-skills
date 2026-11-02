@@ -61,9 +61,22 @@ function classifyEntry(entry, fullPath) {
   }
 }
 
+/**
+ * Walk dir for SKILL.md files. Returns { files, unreadableDirs }: a directory
+ * that cannot be listed (e.g. EACCES) is recorded in unreadableDirs, not
+ * thrown, so one bad directory neither aborts the scan nor discards the
+ * findings from the rest of the tree.
+ */
 function walkForSkillFiles(dir, ancestorRealPaths) {
-  const results = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    return { files: [], unreadableDirs: [{ dir, message: err.message }] };
+  }
+  const files = [];
+  const unreadableDirs = [];
+  for (const entry of entries) {
     if (IGNORED_DIRS.has(entry.name)) continue;
     const fullPath = path.join(dir, entry.name);
     const kind = classifyEntry(entry, fullPath);
@@ -72,12 +85,14 @@ function walkForSkillFiles(dir, ancestorRealPaths) {
       // A link back to a directory already being scanned would recurse
       // forever; every skill below it is already covered by the outer scan.
       if (ancestorRealPaths.has(realPath)) continue;
-      results.push(...walkForSkillFiles(fullPath, new Set([...ancestorRealPaths, realPath])));
+      const nested = walkForSkillFiles(fullPath, new Set([...ancestorRealPaths, realPath]));
+      files.push(...nested.files);
+      unreadableDirs.push(...nested.unreadableDirs);
     } else if (kind === "file" && entry.name === "SKILL.md") {
-      results.push(fullPath);
+      files.push(fullPath);
     }
   }
-  return results;
+  return { files, unreadableDirs };
 }
 
 /**
@@ -109,14 +124,24 @@ function dedupeByRealFile(filePaths, rootDir) {
 }
 
 /**
+ * Scan rootDir for SKILL.md files. Returns { files, unreadableDirs }, where
+ * unreadableDirs lists each directory that could not be listed, so the caller
+ * can report it instead of the scan crashing.
+ */
+function scanSkillFiles(rootDir) {
+  const { files, unreadableDirs } = walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
+  return { files: dedupeByRealFile(files, rootDir), unreadableDirs };
+}
+
+/**
  * Recursively find every SKILL.md file under rootDir, excluding
  * node_modules and .git. Symlinked SKILL.md files and symlinked skill
  * directories are followed, so they are validated like any other skill. A
- * skill reachable through more than one path is returned once.
+ * skill reachable through more than one path is returned once. A directory
+ * that cannot be listed is skipped here; validateRepo reports it.
  */
 export function findSkillFiles(rootDir) {
-  const found = walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
-  return dedupeByRealFile(found, rootDir);
+  return scanSkillFiles(rootDir).files;
 }
 
 /**
@@ -382,8 +407,14 @@ export function validateSkillFile(filePath, rootDir) {
  * duplicate-name check. Returns { hardFails, softWarns, filesChecked }.
  */
 export function validateRepo(rootDir) {
-  const files = findSkillFiles(rootDir);
-  const hardFails = [];
+  const { files, unreadableDirs } = scanSkillFiles(rootDir);
+  // Skills inside a directory that could not be listed were never validated, so
+  // the directory is a hard fail: a clean exit would be a false pass.
+  const hardFails = unreadableDirs.map(({ dir, message }) => ({
+    file: path.relative(rootDir, dir) || ".",
+    rule: "unreadable",
+    message: `Cannot read directory: ${message}`,
+  }));
   const softWarns = [];
   const filesByName = new Map();
 
