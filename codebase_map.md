@@ -45,7 +45,9 @@ nh-skills/
 | `fixtures/valid-skill/` | A minimal `SKILL.md` that should pass every validator check. | Used by `test/` to assert the validator does *not* flag it. |
 | `fixtures/invalid-skill/` | One or more `SKILL.md` samples, each violating a specific hard-fail or soft-warn rule. | Used by `test/` to assert the validator *does* flag each violation, one rule at a time. |
 | `test/` | `node:test`-based self-tests for the validator, run against `fixtures/`. | This is the project's entire test suite — no Jest/Vitest/pytest. Name pattern: `*.test.mjs`. |
-| `.github/workflows/validate-skills.yml` | The CI gate. One GitHub Actions job, triggered on PRs touching `**/SKILL.md`, running the same validator invocation as local `npm run validate`. | No CI-only branch of logic — CI and local dev call the identical script. |
+| `.github/workflows/validate-skills.yml` | The CI gate. One job that runs `npm ci`, a dependency audit, `npm run validate` and `npm test` on PRs and pushes to `main` touching skills, scripts, tests, fixtures, the package files or the workflow itself. | No CI-only branch of logic — CI and local dev call the identical script. |
+| `.github/workflows/gitleaks.yml` | Secret scan (gitleaks) on every PR and push to `main`. | Third-party actions are pinned to commit SHAs; the token is read-only. |
+| `.github/dependabot.yml` | Weekly npm and GitHub Actions update PRs. | Keeps the pinned action SHAs from going stale. |
 | `package.json` | Declares `js-yaml` as the single devDependency and exposes `npm run validate` (and `npm test` for the validator's own self-tests). | No other dependencies; no bundler config. |
 | `memory.md` | Agent-writable accumulated-lessons index. | See its own convention note; near-empty until real history accrues. |
 | `tech.md` | Fast-lookup stack inventory for this repo. | — |

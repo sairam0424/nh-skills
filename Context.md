@@ -11,7 +11,7 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 ## Current state (as of 2026-11-02)
 
 - **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
-- **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the one exception is the optional Workflow script bundled with `nh-breaker`, which runs only inside the Claude Code Workflow tool). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run as a single GitHub Actions job on every PR touching `**/SKILL.md`.
+- **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the one exception is the optional Workflow script bundled with `nh-breaker`, which runs only inside the Claude Code Workflow tool). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run in CI by the `validate-skills.yml` job (`AGENTS.md` lists the whole CI set-up).
 - **Loop proven twice, then reset on 2026-11-02**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) went through the full author → lint → CI → merge loop and were then removed to start fresh. `nh-breaker` is the only skill now.
 - **Only skill: `nh-breaker`** (merged via PR #4). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-breaker/references/loop-design.md`.
 - **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
@@ -23,7 +23,7 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 Two layers only:
 
 1. **The skill artifacts** — `<skill-name>/SKILL.md` (+ optional `scripts/`, `references/`, `assets/`), no runtime of its own, installable by directory structure alone.
-2. **The validator** — `scripts/validate-skills.mjs`, a single dependency-light Node script that lints every `SKILL.md`'s frontmatter schema and structural conventions, wired into CI via one GitHub Actions job on PRs touching `**/SKILL.md`.
+2. **The validator** — `scripts/validate-skills.mjs`, a single dependency-light Node script that lints every `SKILL.md`'s frontmatter schema and structural conventions, wired into CI by the `validate-skills.yml` GitHub Actions job.
 
 No manifest, no packaging step, no build. See `AGENTS.md`'s Directory Map for the concrete file layout. See `../Not-Humans-Lab/architecture.md` for how nh-skills fits into the three-project system (C4 Level 1 only — this repo owns its own internals).
 
