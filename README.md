@@ -25,7 +25,7 @@ Either approach works because a skill is just a directory containing a `SKILL.md
 Once installed, a skill activates in one of two ways:
 
 - **Natural language** — Claude reads the `description` field in the skill's frontmatter and decides on its own when the request matches, no explicit invocation needed.
-- **Explicit slash-style tag** — you can also invoke it directly by name, e.g. `/nh-commit`, if you want to force it rather than rely on automatic matching.
+- **Explicit slash-style tag** — you can also invoke it directly by name, e.g. `/nh-breaker`, if you want to force it rather than rely on automatic matching.
 
 ## Adding a new skill
 
@@ -46,7 +46,6 @@ This is a personal collection rather than a large open-source project, so there'
 
 | Skill | Description |
 |---|---|
-| `nh-commit` | Strict git commit message formatting |
 | `nh-breaker` | Bounded breaker loop: adversarial agents try to break code you own, each break needs a failing reproducer, and fixes are checked by agents against your test command in a throwaway worktree; final proof is a manual re-run, and a sandbox is advised |
 
 ## License

@@ -80,7 +80,7 @@ nh-skills/
 
 Same template as every sibling project in this suite — see this repo's own `Branches.md` (Conventional Commits, trunk-based/GitHub Flow, squash-merge only, PR required even for solo work), copied verbatim from `../Not-Humans-Lab/Branches.md` since each repo is independent and cannot rely on a cross-repo relative path surviving a standalone clone. Summary:
 
-- Branch naming: `type/scope-slug` (e.g. `feat/skills-nh-commit`, `fix/skills-frontmatter-validation`).
+- Branch naming: `type/scope-slug` (e.g. `feat/skills-nh-breaker`, `fix/skills-frontmatter-validation`).
 - Commits: [Conventional Commits](https://www.conventionalcommits.org) — required, drives changelog/versioning.
 - Every skill addition/edit goes through a PR, even solo. CI (`npm run validate`) must pass before merge.
 - Squash-merge only; the squash commit message must itself be a valid Conventional Commit.
