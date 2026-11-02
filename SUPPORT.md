@@ -49,7 +49,7 @@ A good report lets the maintainer reproduce the problem without a
 back-and-forth. Please include:
 
 1. **What skill or file is affected** — the exact path, e.g.
-   `nh-commit/SKILL.md`.
+   `nh-breaker/SKILL.md`.
 2. **What you did** — the exact command or action (e.g. `node
    scripts/validate-skills.mjs`, or "installed via `npx skills add`").
 3. **What you expected** vs. **what actually happened** — include the

@@ -194,3 +194,9 @@ This decision is confirmed as implemented when:
   SHA-256 integrity-manifest scheme and prompt-injection review
   requirements — the lint gate this ADR establishes is a prerequisite for,
   but not a substitute for, that future work.
+
+## Status note (2026-11-02)
+
+The walking-skeleton skill named in acceptance criterion 4, `nh-commit`, met
+it at the time and has since been removed so the collection can start fresh
+with `nh-breaker`. The decision recorded in this ADR is unchanged.

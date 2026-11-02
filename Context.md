@@ -8,12 +8,12 @@ nh-skills is a personal, curated collection of Claude Code Agent Skills (`SKILL.
 
 nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live GitHub repos with green CI) — this file only tracks nh-skills' own state; see each sibling's own `Context.md` for theirs, and `../Not-Humans-Lab/status.md` for the cross-project rollup.
 
-## Current state (as of 2026-09-02)
+## Current state (as of 2026-11-02)
 
 - **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
 - **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the one exception is the optional Workflow script bundled with `nh-breaker`, which runs only inside the Claude Code Workflow tool). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run as a single GitHub Actions job on every PR touching `**/SKILL.md`.
-- **Walking skeleton proven, and proven repeatable**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) have both been authored end-to-end and merged through the full author → lint → CI → merge loop — the loop works a second time, not just once.
-- **Third skill in review, not merged: `nh-breaker`** (branch `feat/skills-nh-breaker`). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-breaker/references/loop-design.md`.
+- **Loop proven twice, then reset on 2026-11-02**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) went through the full author → lint → CI → merge loop and were then removed to start fresh. `nh-breaker` is the only skill now.
+- **Only skill: `nh-breaker`** (merged via PR #4). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-breaker/references/loop-design.md`.
 - **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
 - **No dedicated test framework.** The validator script is the test suite for this repo's own tooling, backed by fixture-based self-tests using Node's built-in `node:test` (no Jest/Vitest/pytest).
 - **License: Apache-2.0**, decided once at the Not-Humans-Lab system level and applied identically across all three sibling projects for enterprise-clearable, patent-safe consistency (see `../Not-Humans-Lab/decisions.md`).
@@ -38,8 +38,8 @@ No manifest, no packaging step, no build. See `AGENTS.md`'s Directory Map for th
 
 Grow the skill catalog gradually, one skill at a time, proving the author-to-merge loop each time before adding the next. **Do not overbuild tooling now.** Per the earlier research's own revisit threshold, tooling beyond the current single validator + CI job is only reconsidered once the catalog crosses roughly **30-40 skills**, or once **outside contributors** actually show up (a manifest, a registry, contributor-facing docs, or a packaging step become justifiable at that point — not before). Until then, the plan is:
 
-1. ~~Finish the `nh-commit` walking skeleton (Phase 2) — prove the full loop once.~~ Done (PR #1, merged).
-2. ~~Add a second skill, prove the loop is repeatable.~~ Done (`nh-style-markdown`, PR #2, merged).
+1. ~~Prove the author-to-merge loop twice with `nh-commit` and `nh-style-markdown`.~~ Done (PRs #1 and #2); both skills were removed on 2026-11-02 to start fresh.
+2. ~~Add `nh-breaker` as the first skill of the fresh start.~~ Done (PR #4, merged).
 3. Continue adding skills one at a time, each getting the same validator + CI + (where applicable) security-review treatment.
 4. Revisit tooling only at the ~30-40 skill mark or on outside contribution — not on a calendar, not speculatively.
 
@@ -47,7 +47,7 @@ nh-deck and daily-dose have completed their own Phases 3-6 — see their own rep
 
 ## Open risks
 
-- **Two skills have gone through the loop so far.** The author-to-merge loop is proven repeatable once (2nd skill went as smoothly as the 1st) — the real test now is whether it holds at the 5th and 10th skill too.
+- **One skill is in the repo.** The loop was proven twice before the reset; with `nh-breaker` as the only skill, repeatability is untested again until a second skill lands.
 - **The security-review step has been exercised once (on `nh-breaker`), and the validator cannot judge intent.** The review found real issues that `npm run validate` could not see, which confirms the step is load-bearing. It was run by an independent reviewer agent, not a human, so it is a lead-generator, not a sign-off.
 - **The validator only reads `SKILL.md` files.** A bundled script such as `nh-breaker/scripts/breaker-loop.js` has no repo check; its only guards are a syntax check, a fixture run and the review, all described in the skill's own references. If more skills ship scripts, that gap needs a decision (it is not yet a reason to add tooling).
 - **No outside contributors exist yet**, so the "revisit at 30-40 skills or outside contributors" threshold is untested — the actual pain points that would justify more tooling are still hypothetical.

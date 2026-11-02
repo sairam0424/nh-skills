@@ -32,13 +32,16 @@ for the full rationale.
 | Spec / Plan                                              | Phase | Status      |
 | --------------------------------------------------------- | ----- | ----------- |
 | Pre-scaffold docs (SECURITY.md, SUPPORT.md, status.md, decisions.md) | 1     | Complete    |
-| Walking skeleton: author `nh-commit` through full author→merge loop | 2     | **Complete — merged via PR #1** |
+| Walking skeleton: author `nh-commit` through full author→merge loop | 2     | **Complete — merged via PR #1 (skill removed 2026-11-02)** |
 | `scripts/validate-skills.mjs` (frontmatter + structural lint)        | 2     | Complete, CI-verified |
 | GitHub Actions lint job on `**/SKILL.md` PRs                          | 2     | Complete, green |
 | SHA-256 integrity manifest scheme (per `SECURITY.md`)                 | 3+    | Planned, not started |
 
 ## Recent Progress
 
+- 2026-11-02: started the collection fresh. `nh-commit` and `nh-style-markdown`
+  were removed and `nh-breaker` (PR #4) is now the only skill; the entries
+  below are history.
 - Shipped Phase 2's exit criterion for real: `nh-commit` was authored, passed
   the validator locally, opened as PR #1, passed the CI lint gate, and was
   merged — the full author→validate→PR→CI→merge loop is proven, not just
@@ -54,8 +57,8 @@ for the full rationale.
 
 ## Upcoming Milestones
 
-1. Add a second skill, proving the loop is repeatable, not a one-time
-   success.
+1. Add a second skill after `nh-breaker`, proving the loop is repeatable
+   with the fresh start, not a one-time success.
 2. Add a top-level `README.md` refresh once a second skill exists, to show
    a real multi-skill table instead of a single-row placeholder.
 3. Revisit tooling (manifest, registry, SHA-256 integrity scheme) only at
