@@ -100,29 +100,48 @@ export function parseFrontmatterYaml(frontmatterText) {
 }
 
 /**
+ * Name the YAML type of a parsed frontmatter value for error messages.
+ * Never calls toString on the value: a mapping may define its own
+ * `toString` key.
+ */
+function describeYamlType(value) {
+  if (Array.isArray(value)) return "list";
+  if (value instanceof Date) return "date";
+  if (typeof value === "object") return "mapping";
+  return typeof value;
+}
+
+/**
  * Validate the `name` frontmatter field. Returns an array of hard-fail
  * message strings (empty array means valid).
+ *
+ * The value must be a real YAML string. Coercing it with String() would
+ * turn a mapping into "[object Object]", unwrap a one-element list, or throw
+ * on a mapping that defines its own `toString` key.
  */
 export function validateName(name, folderName) {
   const errors = [];
-  if (name === undefined || name === null || String(name).trim() === "") {
+  if (name === undefined || name === null || (typeof name === "string" && name.trim() === "")) {
     errors.push('Missing required frontmatter field "name"');
     return errors;
   }
-  const nameStr = String(name);
-  if (nameStr.length > NAME_MAX_LENGTH) {
-    errors.push(`"name" exceeds ${NAME_MAX_LENGTH} characters (got ${nameStr.length})`);
+  if (typeof name !== "string") {
+    errors.push(`"name" must be a string (got ${describeYamlType(name)})`);
+    return errors;
   }
-  if (!NAME_PATTERN.test(nameStr)) {
+  if (name.length > NAME_MAX_LENGTH) {
+    errors.push(`"name" exceeds ${NAME_MAX_LENGTH} characters (got ${name.length})`);
+  }
+  if (!NAME_PATTERN.test(name)) {
     errors.push(
       '"name" must contain only lowercase letters, digits, and hyphens (no XML/special characters, no leading, trailing, or double hyphens)'
     );
   }
-  if (RESERVED_NAMES.has(nameStr.toLowerCase())) {
-    errors.push(`"name" must not be a reserved word ("${nameStr}")`);
+  if (RESERVED_NAMES.has(name.toLowerCase())) {
+    errors.push(`"name" must not be a reserved word ("${name}")`);
   }
-  if (folderName !== undefined && nameStr !== folderName) {
-    errors.push(`"name" ("${nameStr}") must match its containing folder name ("${folderName}")`);
+  if (folderName !== undefined && name !== folderName) {
+    errors.push(`"name" ("${name}") must match its containing folder name ("${folderName}")`);
   }
   return errors;
 }
@@ -130,15 +149,26 @@ export function validateName(name, folderName) {
 /**
  * Validate the `description` frontmatter field. Returns
  * { errors, warnings } arrays of message strings.
+ *
+ * Like `name`, the value must be a real YAML string; a non-string would
+ * otherwise bypass the length and XML-tag checks once coerced.
  */
 export function validateDescription(description) {
   const errors = [];
   const warnings = [];
-  if (description === undefined || description === null || String(description).trim() === "") {
+  if (
+    description === undefined ||
+    description === null ||
+    (typeof description === "string" && description.trim() === "")
+  ) {
     errors.push('Missing required frontmatter field "description"');
     return { errors, warnings };
   }
-  const descStr = String(description);
+  if (typeof description !== "string") {
+    errors.push(`"description" must be a string (got ${describeYamlType(description)})`);
+    return { errors, warnings };
+  }
+  const descStr = description;
   if (descStr.length > DESCRIPTION_MAX_LENGTH) {
     errors.push(`"description" exceeds ${DESCRIPTION_MAX_LENGTH} characters (got ${descStr.length})`);
   }
@@ -269,7 +299,9 @@ export function validateSkillFile(filePath, rootDir) {
     softWarns.push({ file: relPath, rule: "description", message });
   }
 
-  const name = data.name !== undefined && data.name !== null ? String(data.name) : null;
+  // Only a genuine string feeds the repo-wide duplicate-name check; a
+  // non-string name was already reported by validateName above.
+  const name = typeof data.name === "string" ? data.name : null;
   return { hardFails, softWarns, name, folderName };
 }
 
