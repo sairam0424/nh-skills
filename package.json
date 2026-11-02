@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-skills.mjs",
-    "test": "node --test test/validate-skills.test.mjs"
+    "test": "node --test"
   },
   "devDependencies": {
     "js-yaml": "^4.1.0"

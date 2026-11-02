@@ -7,7 +7,7 @@
 // Exit code: non-zero if any hard-fail finding exists. Soft warnings never
 // affect the exit code.
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
@@ -26,7 +26,10 @@ const RESERVED_NAMES = new Set(["claude", "anthropic", "skill", "skills"]);
 
 const DESCRIPTION_MAX_LENGTH = 1024;
 const DESCRIPTION_WARN_LENGTH = 900;
-const XML_TAG_PATTERN = /<\/?[a-zA-Z][a-zA-Z0-9-]*(\s[^<>]*)?>/;
+// Tag names follow the XML Name production: a letter or "_" first, then
+// letters, digits, "_", ":", "." or "-". The optional "/" before ">" covers
+// self-closing tags with no space before the slash, e.g. "<br/>".
+const XML_TAG_PATTERN = /<\/?[a-zA-Z_][a-zA-Z0-9_:.-]*(\s[^<>]*)?\/?>/;
 const WHEN_TO_USE_PATTERN = /\buse\s+(this\s+)?(skill\s+)?when\b|\bwhen\s+to\s+use\b/i;
 
 const BODY_LINE_WARN_THRESHOLD = 500;
@@ -38,22 +41,107 @@ const INLINE_CODE_PATH_PATTERN = /`([\w.\-]+(?:\/[\w.\-]+)+\.[A-Za-z0-9]+)`/g;
 const MARKDOWN_LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 
 /**
- * Recursively find every SKILL.md file under rootDir, excluding
- * node_modules and .git.
+ * Classify a directory entry as "directory", "file" or "other". Dirent reports
+ * a symlink as none of these, so a symlink is resolved with statSync to the
+ * type of its target. A link that cannot be resolved (dangling or looping) is
+ * "file" when it is named SKILL.md, so validateSkillFile reports it instead of
+ * the scan skipping it, and "other" for any other name.
  */
-export function findSkillFiles(rootDir) {
-  const results = [];
-  const entries = readdirSync(rootDir, { withFileTypes: true });
+function classifyEntry(entry, fullPath) {
+  if (entry.isDirectory()) return "directory";
+  if (entry.isFile()) return "file";
+  if (!entry.isSymbolicLink()) return "other";
+  try {
+    const target = statSync(fullPath);
+    if (target.isDirectory()) return "directory";
+    if (target.isFile()) return "file";
+    return "other";
+  } catch {
+    return entry.name === "SKILL.md" ? "file" : "other";
+  }
+}
+
+/**
+ * Walk dir for SKILL.md files. Returns { files, unreadableDirs }: a directory
+ * that cannot be listed (e.g. EACCES) is recorded in unreadableDirs, not
+ * thrown, so one bad directory neither aborts the scan nor discards the
+ * findings from the rest of the tree.
+ */
+function walkForSkillFiles(dir, ancestorRealPaths) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    return { files: [], unreadableDirs: [{ dir, message: err.message }] };
+  }
+  const files = [];
+  const unreadableDirs = [];
   for (const entry of entries) {
     if (IGNORED_DIRS.has(entry.name)) continue;
-    const fullPath = path.join(rootDir, entry.name);
-    if (entry.isDirectory()) {
-      results.push(...findSkillFiles(fullPath));
-    } else if (entry.isFile() && entry.name === "SKILL.md") {
-      results.push(fullPath);
+    const fullPath = path.join(dir, entry.name);
+    const kind = classifyEntry(entry, fullPath);
+    if (kind === "directory") {
+      const realPath = realpathSync(fullPath);
+      // A link back to a directory already being scanned would recurse
+      // forever; every skill below it is already covered by the outer scan.
+      if (ancestorRealPaths.has(realPath)) continue;
+      const nested = walkForSkillFiles(fullPath, new Set([...ancestorRealPaths, realPath]));
+      files.push(...nested.files);
+      unreadableDirs.push(...nested.unreadableDirs);
+    } else if (kind === "file" && entry.name === "SKILL.md") {
+      files.push(fullPath);
     }
   }
-  return results;
+  return { files, unreadableDirs };
+}
+
+/**
+ * Collapse paths that reach the same SKILL.md file (for example a skill and a
+ * sibling symlink alias to its folder) into one, so a single skill is neither
+ * counted twice nor reported as a duplicate of itself. The path kept for each
+ * file is the one that does not pass through a symlink; failing that, the
+ * alphabetically first, so the report does not depend on directory order. A
+ * path that cannot be resolved (a dangling or looping link) is kept as is, so
+ * validateSkillFile still reports it.
+ */
+function dedupeByRealFile(filePaths, rootDir) {
+  const rootRealPath = realpathSync(rootDir);
+  const keptByRealFile = new Map();
+  for (const filePath of filePaths) {
+    let realFile;
+    try {
+      realFile = realpathSync(filePath);
+    } catch {
+      realFile = filePath;
+    }
+    const isDirect = realFile === path.join(rootRealPath, path.relative(rootDir, filePath));
+    const kept = keptByRealFile.get(realFile);
+    const replacesKept =
+      kept && (isDirect !== kept.isDirect ? isDirect : filePath < kept.filePath);
+    if (!kept || replacesKept) keptByRealFile.set(realFile, { filePath, isDirect });
+  }
+  return [...keptByRealFile.values()].map(({ filePath }) => filePath);
+}
+
+/**
+ * Scan rootDir for SKILL.md files. Returns { files, unreadableDirs }, where
+ * unreadableDirs lists each directory that could not be listed, so the caller
+ * can report it instead of the scan crashing.
+ */
+function scanSkillFiles(rootDir) {
+  const { files, unreadableDirs } = walkForSkillFiles(rootDir, new Set([realpathSync(rootDir)]));
+  return { files: dedupeByRealFile(files, rootDir), unreadableDirs };
+}
+
+/**
+ * Recursively find every SKILL.md file under rootDir, excluding
+ * node_modules and .git. Symlinked SKILL.md files and symlinked skill
+ * directories are followed, so they are validated like any other skill. A
+ * skill reachable through more than one path is returned once. A directory
+ * that cannot be listed is skipped here; validateRepo reports it.
+ */
+export function findSkillFiles(rootDir) {
+  return scanSkillFiles(rootDir).files;
 }
 
 /**
@@ -68,7 +156,12 @@ export function splitFrontmatter(content) {
       error: 'File must start with a "---" frontmatter delimiter',
     };
   }
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  // The first "---" line after the opener closes the block. The lazy `??`
+  // tries the closer on the very next line first: that line has no newline
+  // before it (the opener consumed it), so without this branch an empty block
+  // ("---\n---") would never close and the scan would run on to a later "---",
+  // leaving a stray "---" as the first line of the captured frontmatter.
+  const match = content.match(/^---\r?\n(?:([\s\S]*?)\r?\n)??---\r?\n?([\s\S]*)$/);
   if (!match) {
     return {
       frontmatterText: null,
@@ -76,7 +169,7 @@ export function splitFrontmatter(content) {
       error: 'Could not find a closing "---" frontmatter delimiter',
     };
   }
-  return { frontmatterText: match[1], body: match[2], error: null };
+  return { frontmatterText: match[1] ?? "", body: match[2], error: null };
 }
 
 /**
@@ -97,29 +190,48 @@ export function parseFrontmatterYaml(frontmatterText) {
 }
 
 /**
+ * Name the YAML type of a parsed frontmatter value for error messages.
+ * Never calls toString on the value: a mapping may define its own
+ * `toString` key.
+ */
+function describeYamlType(value) {
+  if (Array.isArray(value)) return "list";
+  if (value instanceof Date) return "date";
+  if (typeof value === "object") return "mapping";
+  return typeof value;
+}
+
+/**
  * Validate the `name` frontmatter field. Returns an array of hard-fail
  * message strings (empty array means valid).
+ *
+ * The value must be a real YAML string. Coercing it with String() would
+ * turn a mapping into "[object Object]", unwrap a one-element list, or throw
+ * on a mapping that defines its own `toString` key.
  */
 export function validateName(name, folderName) {
   const errors = [];
-  if (name === undefined || name === null || String(name).trim() === "") {
+  if (name === undefined || name === null || (typeof name === "string" && name.trim() === "")) {
     errors.push('Missing required frontmatter field "name"');
     return errors;
   }
-  const nameStr = String(name);
-  if (nameStr.length > NAME_MAX_LENGTH) {
-    errors.push(`"name" exceeds ${NAME_MAX_LENGTH} characters (got ${nameStr.length})`);
+  if (typeof name !== "string") {
+    errors.push(`"name" must be a string (got ${describeYamlType(name)})`);
+    return errors;
   }
-  if (!NAME_PATTERN.test(nameStr)) {
+  if (name.length > NAME_MAX_LENGTH) {
+    errors.push(`"name" exceeds ${NAME_MAX_LENGTH} characters (got ${name.length})`);
+  }
+  if (!NAME_PATTERN.test(name)) {
     errors.push(
       '"name" must contain only lowercase letters, digits, and hyphens (no XML/special characters, no leading, trailing, or double hyphens)'
     );
   }
-  if (RESERVED_NAMES.has(nameStr.toLowerCase())) {
-    errors.push(`"name" must not be a reserved word ("${nameStr}")`);
+  if (RESERVED_NAMES.has(name.toLowerCase())) {
+    errors.push(`"name" must not be a reserved word ("${name}")`);
   }
-  if (folderName !== undefined && nameStr !== folderName) {
-    errors.push(`"name" ("${nameStr}") must match its containing folder name ("${folderName}")`);
+  if (folderName !== undefined && name !== folderName) {
+    errors.push(`"name" ("${name}") must match its containing folder name ("${folderName}")`);
   }
   return errors;
 }
@@ -127,15 +239,26 @@ export function validateName(name, folderName) {
 /**
  * Validate the `description` frontmatter field. Returns
  * { errors, warnings } arrays of message strings.
+ *
+ * Like `name`, the value must be a real YAML string; a non-string would
+ * otherwise bypass the length and XML-tag checks once coerced.
  */
 export function validateDescription(description) {
   const errors = [];
   const warnings = [];
-  if (description === undefined || description === null || String(description).trim() === "") {
+  if (
+    description === undefined ||
+    description === null ||
+    (typeof description === "string" && description.trim() === "")
+  ) {
     errors.push('Missing required frontmatter field "description"');
     return { errors, warnings };
   }
-  const descStr = String(description);
+  if (typeof description !== "string") {
+    errors.push(`"description" must be a string (got ${describeYamlType(description)})`);
+    return { errors, warnings };
+  }
+  const descStr = description;
   if (descStr.length > DESCRIPTION_MAX_LENGTH) {
     errors.push(`"description" exceeds ${DESCRIPTION_MAX_LENGTH} characters (got ${descStr.length})`);
   }
@@ -237,7 +360,14 @@ export function validateSkillFile(filePath, rootDir) {
   const hardFails = [];
   const softWarns = [];
 
-  const content = readFileSync(filePath, "utf8");
+  let content;
+  try {
+    content = readFileSync(filePath, "utf8");
+  } catch (err) {
+    // E.g. a SKILL.md symlink whose target is missing: report it, don't crash.
+    hardFails.push({ file: relPath, rule: "unreadable", message: `Cannot read SKILL.md: ${err.message}` });
+    return { hardFails, softWarns, name: null, folderName };
+  }
   const { frontmatterText, body, error: delimiterError } = splitFrontmatter(content);
   if (delimiterError) {
     hardFails.push({ file: relPath, rule: "frontmatter-delimiters", message: delimiterError });
@@ -266,7 +396,9 @@ export function validateSkillFile(filePath, rootDir) {
     softWarns.push({ file: relPath, rule: "description", message });
   }
 
-  const name = data.name !== undefined && data.name !== null ? String(data.name) : null;
+  // Only a genuine string feeds the repo-wide duplicate-name check; a
+  // non-string name was already reported by validateName above.
+  const name = typeof data.name === "string" ? data.name : null;
   return { hardFails, softWarns, name, folderName };
 }
 
@@ -275,8 +407,14 @@ export function validateSkillFile(filePath, rootDir) {
  * duplicate-name check. Returns { hardFails, softWarns, filesChecked }.
  */
 export function validateRepo(rootDir) {
-  const files = findSkillFiles(rootDir);
-  const hardFails = [];
+  const { files, unreadableDirs } = scanSkillFiles(rootDir);
+  // Skills inside a directory that could not be listed were never validated, so
+  // the directory is a hard fail: a clean exit would be a false pass.
+  const hardFails = unreadableDirs.map(({ dir, message }) => ({
+    file: path.relative(rootDir, dir) || ".",
+    rule: "unreadable",
+    message: `Cannot read directory: ${message}`,
+  }));
   const softWarns = [];
   const filesByName = new Map();
 
@@ -346,11 +484,28 @@ export function main(rootDir = process.cwd()) {
   return result.hardFails.length === 0 ? 0 : 1;
 }
 
+/**
+ * True when this file is the script node was started with. Node resolves
+ * import.meta.url to the real path, so argv[1] must be resolved the same way or
+ * a symlinked invocation path would skip main() and exit 0 without a report.
+ */
 function isMainModule() {
-  return process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  const entry = process.argv[1];
+  if (!entry) return false;
+  const modulePath = fileURLToPath(import.meta.url);
+  try {
+    return realpathSync(entry) === realpathSync(modulePath);
+  } catch {
+    // An entry path that cannot be resolved on disk cannot be this file; fall
+    // back to the plain path comparison.
+    return path.resolve(entry) === modulePath;
+  }
 }
 
 if (isMainModule()) {
   const rootDirArg = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
-  process.exit(main(rootDirArg));
+  // Set the exit code and let node exit on its own. process.exit() would stop
+  // the process while a large report is still queued on a piped stdout (CI log
+  // collector, `| tee`), silently dropping everything past the first pipe buffer.
+  process.exitCode = main(rootDirArg);
 }
