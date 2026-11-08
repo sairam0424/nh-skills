@@ -178,3 +178,72 @@ test("a halt while fixing keeps the confirmed breaks that were not reached yet",
     assert.match(f.note, /halted before fixing: verifier-unavailable:R1-1/);
   }
 });
+
+// ---------- candidates carried over from an earlier round ----------
+const waitingRound = { "R1:boundaries": [finding(1), finding(2)] };
+const carriedPasses = patchWhen(/^confirm:R2-1$/, (d) => ({ ...d, exit1: 0, exit2: 0, legit: false }));
+
+test("a carried-over candidate whose reproducer now passes twice is superseded, not invalid", async () => {
+  const { result } = await runLoop({
+    args: baseArgs({ maxRounds: 2, maxFindingsPerRound: 1 }),
+    plan: waitingRound,
+    override: carriedPasses,
+  });
+  const second = result.findings.find((f) => f.id === "R2-1");
+  assert.equal(second.class, "superseded");
+  assert.equal(second.carried, true);
+  assert.match(second.confirmNote, /carried over from an earlier round/);
+  assert.equal(result.commits.length, 1);
+});
+
+test("the same result for a fresh candidate stays invalid: only carried ones are presumed fixed", async () => {
+  const { result } = await runLoop({
+    args: baseArgs({ maxRounds: 1 }),
+    plan: { "R1:boundaries": [finding(1)] },
+    override: patchWhen(/^confirm:R1-1$/, (d) => ({ ...d, exit1: 0, exit2: 0, legit: false })),
+  });
+  assert.equal(result.findings[0].class, "invalid");
+});
+
+test("without an earlier commit a carried candidate that passes is not presumed fixed", async () => {
+  const { result } = await runLoop({
+    args: baseArgs({ maxRounds: 2, maxFindingsPerRound: 1, fixEnabled: false }),
+    plan: waitingRound,
+    override: carriedPasses,
+  });
+  assert.equal(result.findings.find((f) => f.id === "R2-1").class, "invalid");
+});
+
+test("a carried-over candidate that still fails is confirmed and fixed like any other", async () => {
+  const { result } = await runLoop({
+    args: baseArgs({ maxRounds: 2, maxFindingsPerRound: 1 }),
+    plan: waitingRound,
+  });
+  assert.equal(result.findings.find((f) => f.id === "R2-1").class, "fixed-agent-verified");
+  assert.equal(result.commits.length, 2);
+});
+
+test("a fresh report of a waiting candidate replaces the stale reproducer, whatever its severity", async () => {
+  const { result, calls } = await runLoop({
+    args: baseArgs({ maxRounds: 2, maxFindingsPerRound: 1, fixEnabled: false }),
+    plan: {
+      "R1:boundaries": [finding(1), finding(2, { severity: "medium" })],
+      "R2:boundaries": [sameBug(2, "fresh", { severity: "low" })],
+    },
+  });
+  const second = result.findings.find((f) => f.id === "R2-1");
+  assert.equal(second.carried, undefined, "the fresh reproducer won, so the candidate is not carried");
+  assert.match(callsFor(calls, "confirm:R2-1")[0].prompt, /R2\/boundaries\/fresh\.mjs/);
+});
+
+test("a fresh candidate that passes twice stays invalid even when earlier fixes exist", async () => {
+  const { result } = await runLoop({
+    args: baseArgs({ maxRounds: 2 }),
+    plan: { "R1:boundaries": [finding(1)], "R2:boundaries": [finding(3)] },
+    override: patchWhen(/^confirm:R2-1$/, (d) => ({ ...d, exit1: 0, exit2: 0, legit: false })),
+  });
+  assert.equal(result.commits.length, 1);
+  const fresh = result.findings.find((f) => f.id === "R2-1");
+  assert.equal(fresh.class, "invalid");
+  assert.equal(fresh.carried, undefined);
+});
