@@ -58,7 +58,7 @@ After each round that committed fixes, a separate agent re-runs the judge and th
 | Class | Meaning |
 | --- | --- |
 | fixed-agent-verified | Confirmed break, fix passed every check above according to the loop's agents, committed on the loop's own branch. It becomes fixed-verified only after the main session's own final checks pass |
-| confirmed-unfixed | Confirmed break, fix attempts exhausted or fixing disabled; the work of rejected attempts is kept under refs/breaker/rejected and in the git stash, which is shared with the primary checkout |
+| confirmed-unfixed | Confirmed break, fix attempts exhausted or fixing disabled; the work of rejected attempts is kept under refs/chaos/rejected and in the git stash, which is shared with the primary checkout |
 | lead | Plausible but not proven (flaky, not reachable through the contract, or only partly matching the claim) |
 | invalid | The reproducer failed for a reason unrelated to the claim |
 
@@ -73,7 +73,7 @@ Every command in the loop is run by an agent. Before telling the user anything i
 A linked worktree shares its git directory with the primary checkout, so anything an agent writes there can fire later in the user's own checkout. Save the output of this snapshot to a file before launching the loop and again after it ends, then compare the two files; the only acceptable difference is none (the filter already excludes the loop's own branches, rejected-attempt refs and stash):
 
 ```bash
-snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/breaker/|breaker/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" 2>/dev/null; }
+snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" 2>/dev/null; }
 ```
 
 REPO is the primary checkout. Hooks, local config, other branches' refs and the ignore file in the git directory are all in the snapshot. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.

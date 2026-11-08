@@ -64,7 +64,7 @@ Four building blocks make up the whole system at Phase 2:
 nh-skills/
 ├── <skill-name>/SKILL.md      Building block 1: Skill content collection
 │   (one directory per skill,      — the actual product. Pure Markdown +
-│    e.g. nh-breaker/)             YAML frontmatter, zero runtime.
+│    e.g. nh-chaos-monkey/)        YAML frontmatter, zero runtime.
 │
 ├── scripts/
 │   └── validate-skills.mjs    Building block 2: The validator

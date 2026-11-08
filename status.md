@@ -39,6 +39,8 @@ for the full rationale.
 
 ## Recent Progress
 
+- 2026-11-08: renamed the only skill `nh-breaker` to `nh-chaos-monkey`; the entries
+  below use the old name.
 - 2026-11-02: started the collection fresh. `nh-commit` and `nh-style-markdown`
   were removed and `nh-breaker` (PR #4) is now the only skill; the entries
   below are history.
@@ -57,7 +59,7 @@ for the full rationale.
 
 ## Upcoming Milestones
 
-1. Add a second skill after `nh-breaker`, proving the loop is repeatable
+1. Add a second skill after `nh-chaos-monkey`, proving the loop is repeatable
    with the fresh start, not a one-time success.
 2. Add a top-level `README.md` refresh once a second skill exists, to show
    a real multi-skill table instead of a single-row placeholder.

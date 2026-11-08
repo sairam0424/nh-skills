@@ -1,11 +1,11 @@
 ---
-name: nh-breaker
-description: "Runs a bounded breaker loop on code you own: adversarial breaker agents try to break it, every break must be proven by a reproducer that fails twice on the current tree, a separate fixer patches it with a regression test, and a fresh verifier re-checks against a judge command whose protected files were hashed before the run. Use when asked to break, stress-test, red-team or harden a module, to find and fix bugs adversarially, or to check that a test suite really catches defects. Works in a linked git worktree on its own branch; its instructions forbid pushing, merging and network use, which prompts request but cannot enforce. It does not inject faults into running services or into Claude Code's own tools."
+name: nh-chaos-monkey
+description: "Runs a bounded chaos-monkey loop on code you own: adversarial breaker agents try to break it, every break must be proven by a reproducer that fails twice on the current tree, a separate fixer patches it with a regression test, and a fresh verifier re-checks against a judge command whose protected files were hashed before the run. Use when asked to chaos-test, break, stress-test, red-team or harden a module, to find and fix bugs adversarially, or to check that a test suite really catches defects. Works in a linked git worktree on its own branch; its instructions forbid pushing, merging and network use, which prompts request but cannot enforce. Chaos here means adversarially breaking code in a throwaway worktree: it does not kill instances or inject faults into running services or into Claude Code's own tools."
 argument-hint: "[target path or module] [--judge \"<test command>\"]"
 disable-model-invocation: true
 ---
 
-# nh-breaker
+# nh-chaos-monkey
 
 A bug an agent reports is a claim. This skill turns claims into evidence: a break counts only when a reproducer fails on the current tree, a fix counts only when commands show it passes, and the judge that decides is fenced off from the agent being judged. The loop runs in a separate git worktree, so the user's checkout is not edited.
 
@@ -18,7 +18,7 @@ A bug an agent reports is a claim. This skill turns claims into evidence: a brea
 
 ## What is enforced and what is only requested
 
-The script checks plain values that agents return: exit statuses, test counts, paths, hashes. It rejects malformed or unsafe fields, requires a linked worktree on a branch starting with breaker/, and halts when its independent re-run disagrees with the verifier. It cannot stop an agent from using the network, reading files outside the worktree or pushing; the prompts forbid it, and only an OS-level sandbox stops it. Say this to the user instead of promising isolation.
+The script checks plain values that agents return: exit statuses, test counts, paths, hashes. It rejects malformed or unsafe fields, requires a linked worktree on a branch starting with chaos/, and halts when its independent re-run disagrees with the verifier. It cannot stop an agent from using the network, reading files outside the worktree or pushing; the prompts forbid it, and only an OS-level sandbox stops it. Say this to the user instead of promising isolation.
 
 ## Step 1: confirm the contract
 
@@ -33,7 +33,7 @@ Ask the user to confirm these in one AskUserQuestion, with the defaults as the r
 ## Step 2: prepare
 
 1. Resolve the repository root and make sure HEAD has commits. Uncommitted changes in the user's checkout are not included; say so.
-2. Create the worktree outside the repository on a branch named breaker/SLUG: git worktree add -b breaker/SLUG WORKTREE HEAD. The script refuses any other branch name and the primary checkout.
+2. Create the worktree outside the repository on a branch named chaos/SLUG: git worktree add -b chaos/SLUG WORKTREE HEAD. The script refuses any other branch name and the primary checkout.
 3. Create the scratch directory with mktemp -d, separate from the worktree.
 4. Note BASE, the output of git rev-parse HEAD, and save the shared git state snapshot (command in [the judge protocol](references/judge-protocol.md)) to a file. Step 4 compares against both.
 5. Gitignored dependency folders are missing in a fresh worktree. Install from the lockfile with scripts disabled (for example npm ci --ignore-scripts), after the user agrees. If the project needs install scripts, the user decides.
@@ -41,7 +41,7 @@ Ask the user to confirm these in one AskUserQuestion, with the defaults as the r
 
 ## Step 3: run the loop
 
-Call the Workflow tool with the [loop script](scripts/breaker-loop.js) from this skill's folder; scriptPath is the skill's base directory (shown when the skill loads) plus scripts/breaker-loop.js. Invoking this skill is the user's opt-in to a workflow.
+Call the Workflow tool with the [loop script](scripts/chaos-loop.js) from this skill's folder; scriptPath is the skill's base directory (shown when the skill loads) plus scripts/chaos-loop.js. Invoking this skill is the user's opt-in to a workflow.
 
 ```json
 {
@@ -79,7 +79,7 @@ Group findings by outcome class and show the evidence for each: the reproducer c
 | Class | Meaning |
 | --- | --- |
 | fixed-agent-verified | Proven break, fix passed every check by the loop's agents, committed on the loop's branch; becomes fixed-verified only after Step 4 |
-| confirmed-unfixed | Proven break, fix not achieved; rejected attempts are kept under refs/breaker/rejected and in git stash, which is shared with the user's checkout, so tell them before they run stash pop |
+| confirmed-unfixed | Proven break, fix not achieved; rejected attempts are kept under refs/chaos/rejected and in git stash, which is shared with the user's checkout, so tell them before they run stash pop |
 | lead | Plausible but not proven (flaky or not reachable through the contract) |
 | invalid | The reproducer failed for an unrelated reason |
 

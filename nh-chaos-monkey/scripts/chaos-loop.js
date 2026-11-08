@@ -1,9 +1,9 @@
 export const meta = {
-  name: "nh-breaker-loop",
+  name: "nh-chaos-monkey-loop",
   description:
     "Bounded breaker loop: parallel breakers write reproducers, confirmers prove each break, a fixer plus a fresh verifier handle one break at a time, and an independent judge re-run closes every round that committed. Halts on any failed check.",
   whenToUse:
-    "Called by the nh-breaker skill after it has created a linked git worktree on a breaker/* branch, a scratch directory and a user-confirmed judge command",
+    "Called by the nh-chaos-monkey skill after it has created a linked git worktree on a chaos/* branch, a scratch directory and a user-confirmed judge command",
   phases: [
     { title: "Baseline", detail: "isolation probe, judge, protected hash" },
     { title: "Break", detail: "one breaker per lens, failing reproducers" },
@@ -23,11 +23,11 @@ function parseArgs(raw) {
   try {
     return JSON.parse(raw);
   } catch (e) {
-    throw new Error("nh-breaker-loop: args must be a JSON object");
+    throw new Error("nh-chaos-monkey-loop: args must be a JSON object");
   }
 }
 const argError = (m) => {
-  throw new Error("nh-breaker-loop: " + m);
+  throw new Error("nh-chaos-monkey-loop: " + m);
 };
 const clampInt = (v, lo, hi, dflt) =>
   Math.min(hi, Math.max(lo, Number.isInteger(v) ? v : dflt));
@@ -267,7 +267,7 @@ const commitPrompt = (
 In ${q(C.workdir)}: (1) git add -- ${fx.changedFiles.map(q).join(" ")} (exactly these files, nothing else). (2) Write the commit message to ${q(C.scratch + "/commit-" + f.id + ".txt")} with a heredoc whose delimiter is quoted ('EOF') so nothing is expanded: a fix subject for the title in the finding, in the style of git log --oneline -10 here (Conventional Commits if used), then a body saying what broke, which scenario the regression test ${q(fx.regressionTestPath)} covers, and why the fix is correct. No trailers or attribution lines. (3) git -c core.hooksPath=/dev/null commit -F ${q(C.scratch + "/commit-" + f.id + ".txt")}. Do not push. Return sha (git rev-parse HEAD) and clean (true if git status --porcelain is empty afterwards).`;
 
 const resetPrompt = (f, attempt) =>
-  `RESET for ${f.id}: attempt ${attempt} did not pass. In ${q(C.workdir)} run: git stash push --include-untracked -m ${q("nh-breaker rejected " + f.id + " attempt " + attempt)}   then, if it saved something: git update-ref ${q("refs/breaker/rejected/" + f.id + "-a" + attempt)} refs/stash   so the work stays reachable by name. Then run git status --porcelain. Return stashRef (the ref name you created, or "none" if there was nothing to stash) and clean (true if the status is empty).`;
+  `RESET for ${f.id}: attempt ${attempt} did not pass. In ${q(C.workdir)} run: git stash push --include-untracked -m ${q("nh-chaos-monkey rejected " + f.id + " attempt " + attempt)}   then, if it saved something: git update-ref ${q("refs/chaos/rejected/" + f.id + "-a" + attempt)} refs/stash   so the work stays reachable by name. Then run git status --porcelain. Return stashRef (the ref name you created, or "none" if there was nothing to stash) and clean (true if the status is empty).`;
 
 const rejudgePrompt = (base, allowed) =>
   `REJUDGE. Run exactly these in ${q(C.workdir)} and report real results, with no analysis: (1) ${C.judgeCmd} -> judgeExit, testCount, outputTail (last 15 lines); (2) ${protectedCheck(base, allowed)} -> protectedExit; (3) git status --porcelain empty? -> clean; (4) git rev-parse HEAD -> headSha.`;
@@ -518,10 +518,10 @@ const iso = await agent(PRE + isolationPrompt(), {
   schema: ISOLATION,
 });
 if (!iso) return result(state, "isolation-check-failed");
-if (iso.gitDir === iso.gitCommonDir || !iso.branch.startsWith("breaker/"))
+if (iso.gitDir === iso.gitCommonDir || !iso.branch.startsWith("chaos/"))
   return result(
     state,
-    "not-an-isolated-worktree: workdir must be a linked git worktree on a breaker/* branch, never the primary checkout (the judge was not run)",
+    "not-an-isolated-worktree: workdir must be a linked git worktree on a chaos/* branch, never the primary checkout (the judge was not run)",
   );
 if (iso.dirty) return result(state, "workdir-not-clean-at-start");
 const base = await agent(PRE + baselinePrompt(), {
