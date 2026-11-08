@@ -6,12 +6,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { cleanGitEnv } from "./support/git-env.mjs";
+
 // The shared git state snapshot is the only thing that notices a loop agent planting a hook or a config
 // setting in the git directory a linked worktree shares with the user's checkout. These tests run the
 // command exactly as the judge protocol documents it, so the docs and the tests cannot drift apart.
 const PROTOCOL = fileURLToPath(new URL("../nh-chaos-monkey/references/judge-protocol.md", import.meta.url));
-const GIT_ENV = { GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
-const CREDENTIAL = ["tok", "en", "123", "abc"].join("");
+// Secret-looking names and values are assembled at run time so no literal sits in this file.
+const part = (...pieces) => pieces.join("");
+const CREDENTIAL = part("tok", "en", "123", "abc");
+const escapeRe = (text) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
 function documentedSnapshotCommand() {
   const blocks = [...fs.readFileSync(PROTOCOL, "utf8").matchAll(/```bash\n([\s\S]*?)```/g)].map((m) => m[1]);
@@ -22,14 +26,17 @@ function documentedSnapshotCommand() {
 
 function makeRepo(t) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "nh-snap-")));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.after(() => {
+    spawnSync("chmod", ["-R", "u+rwx", root]);
+    fs.rmSync(root, { recursive: true, force: true });
+  });
   const repo = path.join(root, "repo");
   fs.mkdirSync(repo);
   const git = (cwd, ...args) =>
     execFileSync("git", ["-C", cwd, "-c", "user.email=t@example.invalid", "-c", "user.name=t", "-c", "core.hooksPath=/dev/null", ...args], {
       stdio: "pipe",
       encoding: "utf8",
-      env: { ...process.env, ...GIT_ENV },
+      env: cleanGitEnv(),
     });
   git(repo, "init", "-q", "-b", "main");
   git(repo, "remote", "add", "origin", "https://example.invalid/x.git");
@@ -37,11 +44,16 @@ function makeRepo(t) {
   return { root, repo, git, common: path.join(repo, ".git") };
 }
 
-function snapshot(repo) {
-  const done = spawnSync("bash", ["-c", documentedSnapshotCommand() + "\nsnapshot"], {
-    env: { ...process.env, ...GIT_ENV, REPO: repo },
+function runSnapshot(repo, { env = {}, bash = "bash", cwd } = {}) {
+  return spawnSync(bash, ["-c", documentedSnapshotCommand() + "\nsnapshot"], {
+    env: cleanGitEnv(repo === undefined ? env : { REPO: repo, ...env }),
     encoding: "utf8",
+    cwd,
   });
+}
+
+function snapshot(repo) {
+  const done = runSnapshot(repo);
   assert.equal(done.status, 0, done.stderr);
   return done.stdout;
 }
@@ -133,4 +145,120 @@ test("a credential in the worktree config file is masked too", (t) => {
   const world = makeRepo(t);
   fs.writeFileSync(path.join(world.common, "config.worktree"), '[remote "z"]\n\turl = https://someone:' + CREDENTIAL + "@example.invalid/z.git\n");
   assert.ok(!snapshot(world.repo).includes(CREDENTIAL));
+});
+
+// ---------- findings of the independent security review ----------
+test("a hooks directory swapped for a symlink is noticed, with the target shown", (t) => {
+  const world = makeRepo(t);
+  simulateLoop(world);
+  const before = snapshot(world.repo);
+  const elsewhere = path.join(world.root, "elsewhere-hooks");
+  fs.mkdirSync(elsewhere);
+  fs.rmSync(path.join(world.common, "hooks"), { recursive: true });
+  fs.symlinkSync(elsewhere, path.join(world.common, "hooks"));
+  const after = snapshot(world.repo);
+  assert.notEqual(after, before);
+  assert.match(after, new RegExp("symlink .*/hooks -> " + escapeRe(elsewhere)));
+});
+
+test("a dangling hook symlink is noticed and not silently skipped", (t) => {
+  const world = makeRepo(t);
+  const before = snapshot(world.repo);
+  fs.symlinkSync("/nonexistent/target", path.join(world.common, "hooks", "pre-push"));
+  const out = snapshot(world.repo);
+  assert.notEqual(out, before);
+  assert.match(out, /symlink .*pre-push -> \/nonexistent\/target/);
+});
+
+test("an unreadable hook is reported as unreadable, not dropped", { skip: process.getuid && process.getuid() === 0 ? "root can read everything" : false }, (t) => {
+  const world = makeRepo(t);
+  const hook = path.join(world.common, "hooks", "pre-commit");
+  fs.writeFileSync(hook, "#!/bin/sh\n");
+  fs.chmodSync(hook, 0o000);
+  assert.match(runSnapshot(world.repo).stdout, /unreadable .*pre-commit/);
+});
+
+test("a config.worktree symlink is reported, never followed", (t) => {
+  const world = makeRepo(t);
+  const decoy = path.join(world.root, "decoy.ini");
+  const decoyValue = ["DECOY", "VALUE", "7731"].join("-");
+  fs.writeFileSync(decoy, part("aws_", "sec", "ret") + " = " + decoyValue + "\n");
+  fs.symlinkSync(decoy, path.join(world.common, "config.worktree"));
+  const out = snapshot(world.repo);
+  assert.ok(!out.includes(decoyValue), "the symlink target's content must not be printed");
+  assert.match(out, /symlink .*config\.worktree -> .*decoy\.ini/);
+});
+
+test("a linked worktree's own config.worktree is covered", (t) => {
+  const world = makeRepo(t);
+  world.git(world.repo, "config", "extensions.worktreeConfig", "true");
+  const loop = simulateLoop(world);
+  const before = snapshot(world.repo);
+  fs.writeFileSync(path.join(world.common, "worktrees", path.basename(loop.wt), "config.worktree"), "[core]\n\tfsmonitor = planted\n");
+  assert.notEqual(snapshot(world.repo), before);
+});
+
+const SENSITIVE = {
+  "an extra header": [part("http.extra", "header"), "Authorization: " + part("Bear", "er ") + CREDENTIAL],
+  "an inline credential helper": [part("credential.", "helper"), "!f() { echo " + part("pass", "word") + "=" + CREDENTIAL + "; }; f"],
+  "a password key": [part("sendemail.smtp", "pass"), CREDENTIAL],
+  "a token key": [part("github.", "tok", "en"), CREDENTIAL],
+};
+for (const [name, [key, value]] of Object.entries(SENSITIVE)) {
+  test("the value of " + name + " is hidden but a change to it is still noticed", (t) => {
+    const world = makeRepo(t);
+    world.git(world.repo, "config", "--local", key, value);
+    const first = snapshot(world.repo);
+    assert.ok(!first.includes(CREDENTIAL), key + " leaked into the snapshot");
+    assert.match(first, new RegExp(escapeRe(key) + "=sha256:[0-9a-f]{12}"));
+    world.git(world.repo, "config", "--local", key, value + "-changed");
+    assert.notEqual(snapshot(world.repo), first);
+  });
+}
+
+test("two credentials on one config line are both masked", (t) => {
+  const world = makeRepo(t);
+  const second = CREDENTIAL + "2";
+  world.git(world.repo, "config", "--local", "url.https://a:" + CREDENTIAL + "@h1.invalid/.insteadOf", "https://b:" + second + "@h2.invalid/");
+  const out = snapshot(world.repo);
+  assert.ok(!out.includes(CREDENTIAL) && !out.includes(second));
+});
+
+test("an ordinary config line is shown as it is", (t) => {
+  const world = makeRepo(t);
+  assert.match(snapshot(world.repo), /^remote\.origin\.url=https:\/\/example\.invalid\/x\.git$/m);
+});
+
+test("the snapshot fails loudly instead of looking like an empty success", (t) => {
+  const world = makeRepo(t);
+  // run from inside a repository: an unset REPO must not quietly snapshot whatever repository the shell is in
+  const unset = runSnapshot(undefined, { cwd: world.repo });
+  assert.notEqual(unset.status, 0, "REPO unset");
+  assert.match(unset.stderr, /set REPO to the primary checkout/);
+  const empty = runSnapshot("", { cwd: world.repo });
+  assert.notEqual(empty.status, 0, "REPO empty");
+  assert.notEqual(runSnapshot(path.join(world.root, "not-a-repo")).status, 0, "not a repository");
+  // a PATH with the tools the command needs, except shasum
+  const bin = path.join(world.root, "bin");
+  fs.mkdirSync(bin);
+  for (const tool of ["git", "find", "sed", "grep", "ls", "tr", "cut", "cat", "readlink", "bash"]) {
+    const found = execFileSync("sh", ["-c", "command -v " + tool], { encoding: "utf8" }).trim();
+    fs.symlinkSync(found, path.join(bin, tool));
+  }
+  const done = runSnapshot(world.repo, { env: { PATH: bin }, bash: path.join(bin, "bash") });
+  assert.notEqual(done.status, 0, "shasum missing");
+  assert.match(done.stderr, /shasum is missing/);
+});
+
+test("the git environment helper drops every inherited GIT_ variable", () => {
+  const names = ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"];
+  for (const key of names) process.env[key] = "/definitely/not/this/" + key;
+  try {
+    const env = cleanGitEnv({ REPO: "/x" });
+    for (const key of names) assert.equal(env[key], undefined, key);
+    assert.equal(env.GIT_CONFIG_GLOBAL, "/dev/null");
+    assert.equal(env.REPO, "/x");
+  } finally {
+    for (const key of names) delete process.env[key];
+  }
 });

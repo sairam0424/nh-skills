@@ -87,10 +87,44 @@ Every command in the loop is run by an agent. Before telling the user anything i
 A linked worktree shares its git directory with the primary checkout, so anything an agent writes there can fire later in the user's own checkout. Save the output of this snapshot to a file before launching the loop and again after it ends, then compare the two files; the only acceptable difference is none (the filter already excludes the loop's own branches, rejected-attempt refs and stash):
 
 ```bash
-snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; mask() { sed -E 's#(://)[^/@]*@#\1***@#'; }; git -C "$REPO" config --local --list | mask; [ -f "$g/config.worktree" ] && mask < "$g/config.worktree"; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} + 2>/dev/null; shasum -a 256 "$g/info/exclude" "$g/info/attributes" 2>/dev/null; ls -1 "$g/worktrees" 2>/dev/null; return 0; }
+snapshot() {
+  : "${REPO:?set REPO to the primary checkout}"
+  command -v shasum >/dev/null || { echo "snapshot: shasum is missing" >&2; return 1; }
+  local g f k l
+  g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)" || return 1
+  # URL credentials are masked; the value of a key that looks like a credential is replaced by a short
+  # hash, so a change to it is still noticed without showing it.
+  mask() {
+    while IFS= read -r l; do
+      k="$(printf %s "${l%%=*}" | tr 'A-Z' 'a-z')"
+      case "$k" in
+        *credential*|*extraheader*|*password*|*passwd*|*token*|*secret*|*smtppass*)
+          printf '%s=sha256:%s\n' "$(printf %s "${l%%=*}" | sed -E 's#(://)[^/@]*@#\1***@#g')" "$(printf %s "${l#*=}" | shasum -a 256 | cut -c1-12)" ;;
+        *) printf '%s\n' "$l" | sed -E 's#(://)[^/@]*@#\1***@#g' ;;
+      esac
+    done
+  }
+  # A symlink is reported, never followed.
+  cfg() { if [ -L "$1" ]; then echo "symlink $1 -> $(readlink "$1")"; elif [ -f "$1" ]; then echo "file $1"; mask < "$1"; fi; }
+  git -C "$REPO" config --local --list | mask
+  cfg "$g/config.worktree"
+  for f in "$g"/worktrees/*/config.worktree; do cfg "$f"; done
+  git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'
+  [ -L "$g/hooks" ] && echo "symlink $g/hooks -> $(readlink "$g/hooks")"
+  find "$g/hooks/" \( -type f -o -type l \) ! -name '*.sample' -print0 | while IFS= read -r -d '' f; do
+    if [ -L "$f" ]; then echo "symlink $f -> $(readlink "$f")"; else shasum -a 256 "$f" || echo "unreadable $f"; fi
+  done
+  shasum -a 256 "$g/info/exclude" "$g/info/attributes" 2>/dev/null
+  ls -1 "$g/worktrees" 2>/dev/null
+  return 0
+}
 ```
 
-REPO is the primary checkout. Hooks, local and worktree config (with credentials in remote URLs masked), other branches' refs, the ignore and attributes files and the list of linked worktrees in the git directory are all in the snapshot. Keep the saved file outside the scratch directory with mode 600. Take the snapshot after the loop's worktree exists: its last lines list the linked worktrees, so a snapshot taken before the worktree differs from one taken after by exactly that entry. The worktree config file is read directly, not through git config --worktree, which fails once a linked worktree exists unless the worktree-config extension is on. The repository's tests run this exact command against an ordinary loop run, which must not change it, and against planted hooks, config and attributes changes, new refs and a leftover worktree, which must. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
+REPO is the primary checkout. Save the output with the file mode set at creation, for example (umask 077; snapshot > FILE), and keep it outside the scratch directory, because it lists the local git configuration. Take the snapshot after the loop's worktree exists: its last lines list the linked worktrees, so a snapshot taken before the worktree differs from one taken after by exactly that entry.
+
+What it covers: local config and every worktree config file (read directly, never followed through a symlink), refs other than the loop's own chaos/ branches, rejected-attempt refs and the stash, every hook (a symlink is reported with its target, an unreadable file is reported as unreadable), the exclude and attributes files, and the list of linked worktrees. What it does not cover, by design or limit: refs under chaos/ and the stash (the loop writes there), include.path targets of the config, everything else inside the linked worktrees' git directories, and the global and system config. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout.
+
+What it hides: the value of any config key whose name contains credential, extraheader, password, passwd, token, secret or smtppass is replaced by a short hash (a change is still noticed), and the user and password part of URLs is masked. It does not hide secrets in other keys or forms (an inline secret in a core.sshCommand, a password containing @ or /, a value split over continued lines), so treat the saved file as sensitive and do not paste it. It stops with a non-zero status, and says why on stderr, when REPO is unset or not a repository or shasum is missing. The repository's tests run this exact command against an ordinary loop run, which must not change it, and against planted hooks, hook symlinks, config, worktree config, attributes and exclude changes, new refs and a leftover worktree, which must. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
 
 ## Optional: judge-integrity canary
 
