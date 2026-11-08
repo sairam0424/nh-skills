@@ -20,7 +20,7 @@ test("args that are not JSON fail with a clear message", async () => {
 });
 
 test("workdir and scratch must be absolute, plain paths", async () => {
-  for (const bad of ["relative/path", "/has space/x", "/a/../b", "/a//b", "/a/./b", "/a/$(id)"]) {
+  for (const bad of ["relative/path", "/has space/x", "/a/../b", "/a//b", "/a/./b", "/a/$(id)", "/it's", "/a;b", "/a`id`"]) {
     await rejectsWith(baseArgs({ workdir: bad }), /absolute paths/);
     await rejectsWith(baseArgs({ scratch: bad }), /absolute paths/);
   }
@@ -119,4 +119,27 @@ test("a lens brief keeps up to 600 characters so a rule at its end is not cut of
   const cut = calls.find((c) => c.label === "break:R1:cut").prompt;
   assert.match(kept, /END-MARKER/);
   assert.doesNotMatch(cut, /LOST-MARKER/);
+});
+
+test("every numeric cap clamps at both bounds and falls back to its default for anything but an integer", async () => {
+  const caps = {
+    maxRounds: [1, 6, 3],
+    maxFindingsPerRound: [1, 10, 6],
+    maxFixAttempts: [1, 5, 3],
+    plateauRounds: [1, 4, 1],
+    maxPerFile: [1, 10, 2],
+  };
+  for (const [key, [lo, hi, dflt]] of Object.entries(caps)) {
+    const effective = async (value) => (await runLoop({ args: baseArgs(value === undefined ? {} : { [key]: value }) })).result.settings[key];
+    assert.equal(await effective(lo - 1), lo, key + " below the minimum");
+    assert.equal(await effective(-5), lo, key + " negative");
+    assert.equal(await effective(lo), lo, key + " at the minimum");
+    assert.equal(await effective(hi), hi, key + " at the maximum");
+    assert.equal(await effective(hi + 1), hi, key + " above the maximum");
+    assert.equal(await effective(999), hi, key + " far above the maximum");
+    assert.equal(await effective(undefined), dflt, key + " default");
+    assert.equal(await effective(1.5), dflt, key + " fractional falls back to the default");
+    assert.equal(await effective("2"), dflt, key + " string falls back to the default");
+    assert.equal(await effective(null), dflt, key + " null falls back to the default");
+  }
 });

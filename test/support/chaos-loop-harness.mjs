@@ -189,7 +189,7 @@ function defaultResponse(call, world) {
       outputTail: "pass",
     };
   m = /^recheck:(.+)$/.exec(label);
-  if (m) return { exit: 1, reproSha: h64(m[1]), headSha: world.head, workdirDirty: false };
+  if (m) return { exit: 1, outputTail: "FAIL", reproSha: h64(m[1]), headSha: world.head, workdirDirty: false };
   if (/^commit:/.test(label)) return { sha: hexSha(100 + world.commits), clean: true };
   if (/^reset:/.test(label)) return { stashRef: "refs/chaos/rejected/x", clean: true };
   if (/^rejudge:/.test(label))

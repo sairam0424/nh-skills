@@ -4,13 +4,15 @@
 // Run it in the SAME environment the loop's agents will use (their Bash tool), not somewhere else.
 // It tries a handful of actions an enforced sandbox must refuse and reports, per action, whether
 // the environment "blocked" it, "allowed" it, or could not tell ("unknown"). It never reads a
-// credential file's content, never sends data over the network, and removes everything it creates.
+// credential file's content, never sends data over the network, and removes what it creates (a
+// refusal to remove something is reported in that probe's detail).
 //
 //   node sandbox-probe.mjs --workdir /abs/worktree --scratch /abs/scratch [--net host:port] [--json]
 //
-// Exit status: 0 when every probe that could be evaluated was blocked, 1 when any was allowed,
-// 2 on a usage error. "blocked" on the network probe also covers "the machine is offline", so a
-// pass says the egress attempt failed, not why.
+// Exit status: 0 only when every probe was blocked (the credential probe may also be unknown when no
+// credential file exists), 1 when any probe was allowed or could not be evaluated, 2 on a usage
+// error. "blocked" on the network probe also covers "the machine is offline", so a pass says the
+// egress attempt failed, not why.
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -20,21 +22,46 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BLOCK_CODES = new Set(["EACCES", "EPERM", "EROFS"]);
-const CREDENTIAL_PATHS = [".ssh/id_rsa", ".ssh/id_ed25519", ".aws/credentials", ".config/gh/hosts.yml", ".netrc"];
+const CREDENTIAL_PATHS = [
+  ".ssh/id_rsa",
+  ".ssh/id_ed25519",
+  ".aws/credentials",
+  ".config/gh/hosts.yml",
+  ".netrc",
+  ".npmrc",
+  ".kube/config",
+  ".docker/config.json",
+  ".config/gcloud/credentials.db",
+];
 const SECRET_ENV = /(TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|CREDENTIAL|PRIVATE_?KEY|^AWS_|^ANTHROPIC_|^OPENAI_|^GH_|^GITHUB_)/i;
 
 const rand = () => randomBytes(6).toString("hex");
 const verdict = (name, result, detail) => ({ name, result, detail });
 
-// Try to create a file; "allowed" means it was created (and is removed again).
-function tryCreate(name, file) {
+// Try to create a file. Creating it is what decides "allowed"; a refused clean-up afterwards
+// is reported in the detail and never turns the result into "blocked".
+export function tryCreate(name, file, fsImpl = fs) {
   try {
-    fs.writeFileSync(file, "nh-chaos-monkey sandbox probe\n", { flag: "wx" });
-    fs.unlinkSync(file);
-    return verdict(name, "allowed", "created " + file);
+    fsImpl.writeFileSync(file, "nh-chaos-monkey sandbox probe\n", { flag: "wx" });
   } catch (e) {
     if (BLOCK_CODES.has(e.code)) return verdict(name, "blocked", e.code);
     return verdict(name, "unknown", String(e.code || e.message));
+  }
+  try {
+    fsImpl.unlinkSync(file);
+    return verdict(name, "allowed", "created " + file);
+  } catch (e) {
+    return verdict(name, "allowed", "created " + file + " and could not remove it (" + (e.code || e.message) + "); remove it by hand");
+  }
+}
+
+// Open a file for writing without changing a byte: a write-access check.
+function openForWrite(name, file) {
+  try {
+    fs.closeSync(fs.openSync(file, "r+"));
+    return verdict(name, "allowed", "opened " + file + " for writing");
+  } catch (e) {
+    return BLOCK_CODES.has(e.code) ? verdict(name, "blocked", e.code) : verdict(name, "unknown", String(e.code || e.message));
   }
 }
 
@@ -85,11 +112,13 @@ function probeSymlinkEscape(scratch, home) {
   } catch (e) {
     return verdict("symlink-escape", "unknown", "could not create the link: " + (e.code || e.message));
   }
+  const result = tryCreate("symlink-escape", path.join(link, ".nh-chaos-probe-" + rand()));
   try {
-    return tryCreate("symlink-escape", path.join(link, ".nh-chaos-probe-" + rand()));
-  } finally {
     fs.unlinkSync(link);
+  } catch (e) {
+    return { ...result, detail: result.detail + "; could not remove the link " + link + " (" + (e.code || e.message) + ")" };
   }
+  return result;
 }
 
 function probeGitState(workdir) {
@@ -102,18 +131,14 @@ function probeGitState(workdir) {
   } catch (e) {
     return [verdict("git-hooks-write", "unknown", "not a git worktree"), verdict("git-config-write", "unknown", "not a git worktree")];
   }
-  const hooks = path.join(common, "hooks");
-  const config = path.join(common, "config");
-  let configResult;
-  try {
-    fs.closeSync(fs.openSync(config, "r+")); // write access check without changing a byte
-    configResult = verdict("git-config-write", "allowed", "opened " + config + " for writing");
-  } catch (e) {
-    configResult = BLOCK_CODES.has(e.code)
-      ? verdict("git-config-write", "blocked", e.code)
-      : verdict("git-config-write", "unknown", String(e.code || e.message));
-  }
-  return [tryCreate("git-hooks-write", path.join(hooks, ".nh-chaos-probe-" + rand())), configResult];
+  const results = [
+    tryCreate("git-hooks-write", path.join(common, "hooks", ".nh-chaos-probe-" + rand())),
+    openForWrite("git-config-write", path.join(common, "config")),
+  ];
+  // With extensions.worktreeConfig a second config file can carry code-running settings.
+  const worktreeConfig = path.join(common, "config.worktree");
+  if (fs.existsSync(worktreeConfig)) results.push(openForWrite("git-worktree-config-write", worktreeConfig));
+  return results;
 }
 
 function probeEnvironment(env) {
@@ -134,7 +159,10 @@ export async function runProbes({ workdir, scratch, net: target = "1.1.1.1:443",
     await probeNetwork(target),
   ];
   const allowed = probes.filter((p) => p.result === "allowed").map((p) => p.name);
-  return { verdict: allowed.length ? "not-enforced" : "enforced", allowed, probes };
+  // A probe that could not be evaluated is not a pass, except the credential probe: when none of the
+  // usual credential files exist there is nothing there to protect.
+  const unresolved = probes.filter((p) => p.result === "unknown" && p.name !== "read-credentials").map((p) => p.name);
+  return { verdict: allowed.length ? "not-enforced" : unresolved.length ? "incomplete" : "enforced", allowed, unresolved, probes };
 }
 
 function parseArgs(argv) {
@@ -158,7 +186,8 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(file
   if (args.json) console.log(JSON.stringify(report));
   else {
     for (const p of report.probes) console.log(p.result.padEnd(8) + p.name.padEnd(24) + p.detail);
-    console.log("\nverdict: " + report.verdict + (report.allowed.length ? " (allowed: " + report.allowed.join(", ") + ")" : ""));
+    const why = report.allowed.length ? " (allowed: " + report.allowed.join(", ") + ")" : report.unresolved.length ? " (could not be evaluated: " + report.unresolved.join(", ") + ")" : "";
+    console.log("\nverdict: " + report.verdict + why);
   }
   process.exit(report.verdict === "enforced" ? 0 : 1);
 }

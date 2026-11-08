@@ -74,6 +74,9 @@ test("a halt during confirmation still reports the breaks that were confirmed", 
   assert.ok(first, "the confirmed break must not vanish with the halt");
   assert.equal(first.class, "confirmed-unfixed");
   assert.match(first.note, /halted before/);
+  const culprit = result.findings.find((f) => f.id === "R1-2");
+  assert.equal(culprit.class, "lead", "the reproducer that dirtied the worktree is not trusted");
+  assert.match(culprit.confirmNote, /left the worktree dirty/);
 });
 
 test("a head that moved during confirm also keeps the evidence", async () => {
@@ -84,6 +87,8 @@ test("a head that moved during confirm also keeps the evidence", async () => {
   });
   assert.match(result.haltReason, /^head-moved-during-break-or-confirm/);
   assert.equal(result.findings.length, 1);
+  assert.equal(result.findings[0].class, "lead", "a confirmation made while the head moved is not trusted");
+  assert.match(result.findings[0].confirmNote, /head moved during the round/);
 });
 
 test("an agent that throws mid-run ends in a halt that keeps the commits made so far", async () => {
@@ -130,6 +135,13 @@ const NOT_TESTS = [
   "test/fixtures/data.json",
   ".github/test/ci.test.js",
   "tests/.hidden.test.js",
+  "tests/vitest.config.ts",
+  "test/playwright.config.js",
+  "tests/cypress.config.ts",
+  "test/babel.config.js",
+  "tests/eslint.config.js",
+  "test/tsconfig.json",
+  "tests/tsconfig.base.json",
 ];
 
 test("a regression test path outside the test locations is refused, even though the protected check would allow it", async () => {

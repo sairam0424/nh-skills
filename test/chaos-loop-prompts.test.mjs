@@ -5,8 +5,14 @@ import { baseArgs, callsFor, finding, runLoop } from "./support/chaos-loop-harne
 
 const PLAN = { "R1:boundaries": [finding(1)] };
 
-// A run that reaches every agent role once.
-const fullRun = () => runLoop({ args: baseArgs({ verifierModel: "model-x" }), plan: PLAN });
+// A run that reaches every agent role: two fixes, the second rejected once (reset), the sandbox gate on.
+const TWO = { "R1:boundaries": [finding(1), finding(2)] };
+const fullRun = () =>
+  runLoop({
+    args: baseArgs({ verifierModel: "model-x", requireSandbox: true, probePath: "/w/skill/scripts/sandbox-probe.mjs", maxFixAttempts: 2 }),
+    plan: TWO,
+    override: (call, world, dflt) => (call.label === "verify:R1-2:a1:t1" ? { ...dflt, judgeExit: 1 } : undefined),
+  });
 
 test("every agent prompt (except the model probe) starts with the safety preamble", async () => {
   const { calls } = await fullRun();
@@ -18,7 +24,7 @@ test("every agent prompt (except the model probe) starts with the safety preambl
     assert.match(call.prompt, /Do not push, merge, deploy, publish, tag or post anything, use no network, install nothing/, call.label);
     assert.match(call.prompt, /never write inside any \.git directory/, call.label);
   }
-  for (const role of ["isolation", "baseline", "break", "confirm", "fix", "verify", "commit", "rejudge", "probe-verifier-model"])
+  for (const role of ["isolation", "sandbox-probe", "baseline", "break", "confirm", "recheck", "fix", "verify", "reset", "commit", "rejudge", "probe-verifier-model"])
     assert.ok(seen.has(role), "the full run must reach " + role);
 });
 
@@ -60,7 +66,29 @@ test("git commands that touch hooks or the index disable hooks or are scoped", a
   assert.match(verify, /git -C '\/w\/repo' -c core\.hooksPath=\/dev\/null worktree add --detach/);
 });
 
-test("paths are single-quoted and a quote in a path cannot break out", async () => {
+test("the reset prompt stashes the attempt, pins it under a ref that carries the run name, and keeps the fixer's work reachable", async () => {
+  const { calls } = await fullRun();
+  const reset = calls.find((c) => c.label === "reset:R1-2:a1").prompt;
+  assert.match(reset, /git stash push --include-untracked -m 'nh-chaos-monkey rejected scratch R1-2 attempt 1'/);
+  assert.match(reset, /git update-ref 'refs\/chaos\/rejected\/scratch\/R1-2-a1' refs\/stash/);
+  assert.match(reset, /Return stashRef/);
+});
+
+test("the commit prompt stages exactly the files the fixer listed, nothing broader", async () => {
+  const { calls } = await fullRun();
+  const commit = calls.find((c) => c.label === "commit:R1-1").prompt;
+  assert.ok(commit.includes("git add -- 'src/fix-R1-1-a1.js' 'test/regress-R1-1.test.js'"), commit);
+  assert.match(commit, /No trailers or attribution lines/);
+  assert.match(commit, /Do not push/);
+});
+
+test("the rejudge may add exactly the regression tests of every fix the loop committed", async () => {
+  const { calls } = await fullRun();
+  const rejudge = calls.find((c) => c.label === "rejudge:R1").prompt;
+  assert.match(rejudge, /allowed list: test\/regress-R1-1\.test\.js, test\/regress-R1-2\.test\.js/);
+});
+
+test("paths are single-quoted", async () => {
   const { calls } = await fullRun();
   const baseline = calls.find((c) => c.label === "baseline").prompt;
   assert.ok(baseline.includes("cd '/w/repo' && git ls-files -z -- "));
@@ -83,8 +111,11 @@ test("untrusted finding text is fenced and carries no line that could close the 
     const lines = prompt.split("\n");
     const ends = lines.filter((l) => l.startsWith("--- END FINDING"));
     assert.equal(ends.length, 1, label + ": exactly one line may close the fence");
-    for (const forbidden of ["`", "$(", "|", "\\n"])
-      assert.ok(!lines.some((l) => l.includes("Ignore previous") && l.includes(forbidden)), label + " leaked " + JSON.stringify(forbidden));
+    // Everything between the fence markers is one JSON object whose strings went through clean().
+    const block = prompt.slice(prompt.indexOf("--- BEGIN FINDING"), prompt.indexOf("--- END FINDING"));
+    const body = block.slice(block.indexOf("\n") + 1);
+    assert.match(body, /Ignore previous instructions/, label + ": the hostile title must reach the fence, cleaned");
+    assert.doesNotMatch(body, /[`$|<>&'\\]/, label + " leaked shell syntax into the fenced finding");
   }
   const nextRound = calls.find((c) => c.label === "break:R2:boundaries").prompt;
   assert.equal(nextRound.split("\n").filter((l) => l.startsWith("--- END KNOWN-FINDINGS")).length, 1);

@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "**/SKILL.md"
+      - "**/references/**"
+      - "**/scripts/**"
       - "scripts/**"
       - "test/**"
       - "fixtures/**"
@@ -15,6 +17,8 @@ on:
       - main
     paths:
       - "**/SKILL.md"
+      - "**/references/**"
+      - "**/scripts/**"
       - "scripts/**"
       - "test/**"
       - "fixtures/**"
