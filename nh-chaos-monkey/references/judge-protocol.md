@@ -64,6 +64,19 @@ After each round that committed fixes, a separate agent re-runs the judge and th
 
 Report all four. A report that lists only successes hides the loop's real hit rate.
 
+## A green judge is evidence, not proof
+
+In the manual review in the SoK on DARPA's AIxCC competition (arXiv 2602.07666, 2026), patches from the authors' own reference runs that passed build, proof-of-vulnerability replay and the project's tests were still judged semantically wrong in 37.7% (20 of 53) of cases for one agent and 45.6% (26 of 57) for another. Those are small lab samples, so read them as a warning, not a rate. What follows for this skill:
+
+- A fix is only fixed-agent-verified. The independent verifier, the rejudge and the main session each add a check, and none of them replaces reading the diff.
+- Confirmation is a separate, executed step. A finder's own crash or claim is never enough: Google's OSS-Fuzz-Gen work reports that validating crashes from generated fuzz drivers against realistic entry points removed more than half of the crashes first classed as program errors.
+- Skepticism has to be built in. Anthropic reports that LLM evaluators stay lenient toward LLM output and that tuning a separate evaluator to be skeptical is more tractable than making a generator self-critical. The verifier here runs commands and reports numbers; the diff-review fields (rootCause, testsWeakened, specialCased) are model judgement, so the main session reads the diff itself.
+- Telling an agent not to edit tests is weak. Anthropic's long-running harness forbids it by instruction only, with nothing hashing or locking the tests. This loop hashes the protected files and diffs them against the base commit, which is the stronger form.
+- When a known-good implementation exists, differential comparison against it is the best oracle (Anthropic's C compiler project used GCC this way). The oracle lens in the lens catalogue is for that case.
+- A regression gate matters. In the same project the agents began to break existing behaviour late in the work, so the full judge runs after every fix, in the verifier and again in the rejudge.
+
+Not established by the research: how often fixers tamper with judges in loops like this one, and any held-out oracle or judge canary design that has been tested rather than reasoned. The optional canary below is a reasoned design.
+
 ## Final proof is the human's
 
 Every command in the loop is run by an agent. Before telling the user anything is fixed, re-run the judge yourself in the worktree, bare, and show its output; then run the manifest check, then run git status --porcelain (a halted run can leave uncommitted work, so expect it empty only after a clean finish), then list what changed since the base commit with git diff --name-status BASE, which covers committed and uncommitted tracked changes (modified and added source files are expected; no deleted file, no modified existing test or config, and no added file under CI, git hook or tool-config locations other than ordinary regression test files is acceptable), then compare the shared git state snapshot described below. The manifest lives in the scratch directory, so the diff against the base commit is the check that does not depend on it.
