@@ -1,7 +1,7 @@
 ---
 name: nh-chaos-monkey
 description: "Runs a bounded chaos-monkey loop on code you own, in a throwaway git worktree: breaker agents try to break it (one lens injects dependency failures through test doubles and must prove the fault fired), each break needs a reproducer that fails twice on the current tree, a separate fixer adds a regression test, and a fresh verifier re-checks against a judge whose protected files were hashed first. Use when asked to chaos-test, break, stress-test, red-team or harden a module, to find and fix bugs adversarially, or to check that a test suite really catches defects. Its instructions forbid pushing, merging and network use, which prompts request but cannot enforce. It never kills instances or injects faults into running services or Claude Code's own tools."
-argument-hint: "[target path or module] [--judge \"<test command>\"] [--lead-only] [--accept-no-sandbox]"
+argument-hint: "[target path or module] [--judge \"<test command>\"] [--lead-only] [--accept-no-sandbox] [--allow-install] [--max-rounds N] [--max-findings N] [--token-budget N]"
 disable-model-invocation: true
 ---
 
@@ -28,18 +28,19 @@ Ask the user to confirm these in one AskUserQuestion, with the defaults as the r
 - Judge command: the project's own documented test command, exactly as written. Never substitute a narrower one, pipe it, or add flags that hide its exit status. See [the judge protocol](references/judge-protocol.md).
 - Protected paths: existing tests, fixtures, snapshots, lint, type, runner and CI config, manifests, lockfiles. The fixer may not touch these, which stops it from "fixing" by weakening the judge.
 - Caps: 3 rounds, 6 findings per round, 3 fix attempts, stop after 1 round with nothing new. A loop cannot be trusted to stop itself.
-- Sandbox: this session should run without network access and without credentials reachable from the home directory (container, VM or OS sandbox). Unfamiliar or untrusted code requires it. Run [the probe](scripts/sandbox-probe.mjs) inside that environment and show the result; [the safety runner](references/safety-runner.md) says how to set the sandbox up and what the probe does and does not prove. For code the user trusts they may accept the risk explicitly; record their choice.
+- Sandbox: this session should run without network access and without credentials reachable from the home directory (container, VM or OS sandbox). Unfamiliar or untrusted code requires it. The probe needs the worktree and scratch paths, so you run [it](scripts/sandbox-probe.mjs) at the end of Step 2 inside that environment and show the result; [the safety runner](references/safety-runner.md) says how to set the sandbox up and what the probe does and does not prove. For code the user trusts they may accept the risk explicitly; record their choice.
 
-**Non-interactive use.** When the session cannot ask questions (for example claude -p), do not guess. Proceed only if the invocation supplies the target and --judge, and either the probe passed or --accept-no-sandbox is present; --lead-only turns fixing off. Take caps from the invocation or use the defaults below. If anything is missing, stop and print exactly what is missing and the full command that would work. Never infer consent from silence.
+**Non-interactive use.** When the session cannot ask questions (for example claude -p), do not guess. Proceed only if the invocation supplies the target and --judge, and either the probe (Step 2) reported enforced or --accept-no-sandbox is present; --lead-only turns fixing off. Installing dependencies needs --allow-install; without it stop at Step 2.5 and print the install command. Take the caps from --max-rounds and --max-findings, and a token budget from --token-budget; with no token budget use 1 round and 3 findings, not the defaults. If anything is missing, stop and print exactly what is missing and the full command that would work. Never infer consent from silence.
 
 ## Step 2: prepare
 
 1. Resolve the repository root and make sure HEAD has commits. Uncommitted changes in the user's checkout are not included; say so.
 2. Create the worktree outside the repository on a branch named chaos/SLUG: git worktree add -b chaos/SLUG WORKTREE HEAD. The script refuses any other branch name and the primary checkout.
 3. Create the scratch directory with mktemp -d, separate from the worktree.
-4. Note BASE, the output of git rev-parse HEAD, and save the shared git state snapshot (command in [the judge protocol](references/judge-protocol.md)) to a file. Step 4 compares against both.
-5. Gitignored dependency folders are missing in a fresh worktree. Install from the lockfile with scripts disabled (for example npm ci --ignore-scripts), after the user agrees. If the project needs install scripts, the user decides.
-6. Run the judge once yourself in the worktree. If it is red or runs zero tests, stop and tell the user.
+4. Note BASE, the output of git rev-parse HEAD, and save the shared git state snapshot (command in [the judge protocol](references/judge-protocol.md)) to a file outside the scratch directory with mode 600, because it lists the local git configuration. Step 4 compares against both.
+5. Gitignored dependency folders are missing in a fresh worktree. Install from the lockfile with scripts disabled (for example npm ci --ignore-scripts), after the user agrees (or --allow-install). Installing needs the network, so do it before the agents start inside their sandbox, and read any registry or script setting the repository ships (such as an .npmrc) first, because it is project code. If the project needs install scripts, the user decides.
+6. Run the judge once yourself in the worktree. If it is red or runs zero tests, stop and tell the user. Check that it prints a test count (pass testCountHint so agents read it the same way) and that a new test file raises that count; if the command names single files, switch to the runner's discovery form first, as the judge protocol explains.
+7. If a sandbox is in use, run the probe now: node scripts/sandbox-probe.mjs --workdir WORKTREE --scratch SCRATCH. Show its output. Any verdict other than enforced means the sandbox is not doing its job: stop unless the user accepts the risk.
 
 ## Step 3: run the loop
 
@@ -51,7 +52,7 @@ Call the Workflow tool with the [loop script](scripts/chaos-loop.js) from this s
   "scratch": "/abs/path/to/scratch",
   "judgeCmd": "npm test",
   "target": "src/parser",
-  "protectedPaths": ["test", "package.json", "package-lock.json"],
+  "testCountHint": "node --test prints a summary line 'tests N'",
   "maxRounds": 3,
   "maxFixAttempts": 3,
   "fixEnabled": true,
@@ -60,9 +61,9 @@ Call the Workflow tool with the [loop script](scripts/chaos-loop.js) from this s
 }
 ```
 
-Set requireSandbox only when the user runs the agents inside a sandbox; the loop then refuses to run the judge unless the probe reports every action blocked. Leave it off, and say so in the report, when the user accepts the risk.
+Set requireSandbox only when the user runs the agents inside a sandbox; the loop then refuses to run the judge unless the probe reports enforced, which means no action was allowed or unresolved (a missing credential file is the one tolerated unknown). Leave it off, and say so in the report, when the user accepts the risk. The script refuses unknown argument names and non-boolean values for its switches, so a typo is an error, not a default; the result's settings field echoes what actually took effect, and you should compare it with what the user asked for. protectedPaths adds to the built-in protected set (tests, CI, hooks, ignore file, lint, type and runner config, lockfiles, manifests and tool-config files such as .npmrc); only replaceProtectedDefaults true replaces it. [The loop design](references/loop-design.md) lists every argument.
 
-Leave verifierModel unset unless the user wants a different model family for the verifier and the account allows it; the script probes it first and stops early if it is refused. The loop is slow and uses many agents, so tell the user the scale before launching. Measured so far: roughly 0.5M to 1M subagent tokens per fixed finding, all in (2.4M tokens and 14 minutes for 3 fixes on a toy project; 6.2M tokens, 45 agents and 76 minutes for 8 fixes in two rounds on a real 350-line module; with five lenses, 2.6M for 3 fixes in a small Python project and 5.2M for 4 fixes in a small JavaScript project). A clean run that finds nothing cost 0.9M tokens and 3 minutes. The defaults of 3 rounds and 6 findings per round could therefore reach 18 fixes and roughly 14M tokens. Give the user the estimate, prefer smaller maxRounds and maxFindingsPerRound, and ask for a token budget; the loop checks it at the start of each round.
+Leave verifierModel unset unless the user wants a different model family for the verifier and the account allows it; the script probes it first and stops early if it is refused. The loop is slow and uses many agents, so tell the user the scale before launching. Measured so far: about 0.8M subagent tokens per fixed finding with four lenses (2.4M tokens and 14 minutes for 3 fixes on a toy project; 6.2M tokens, 45 agents and 76 minutes for 8 fixes in two rounds on a real 350-line module), and about 0.85M to 2.7M with the five default lenses, typically 1.2M to 1.4M (2.6M for 3 fixes in a small Python project, 5.2M and 5.7M for 4 fixes in a small JavaScript project, 5.3M for only 2 fixes when rejected attempts piled up). A clean run that finds nothing cost 0.9M tokens and 3 minutes. The defaults of 3 rounds and 6 findings per round allow 18 fixes, which is roughly 23M tokens at the typical rate and up to 48M at the worst measured rate. Give the user the estimate, prefer smaller maxRounds and maxFindingsPerRound, and ask for a token budget; the loop checks it at the start of each round.
 
 The default lenses are boundaries, state-order, error-paths, contract and faults. The [lens catalogue](references/lens-catalogue.md) lists the optional ones and how to write your own. The faults lens adds about a fifth to each round's cost.
 
@@ -74,25 +75,26 @@ If the Workflow tool is unavailable, follow the same phases by hand with fresh, 
 
 The agents ran every command, so their output is a set of leads. Before saying anything is fixed:
 
-1. Read the haltReason in the result first. A halt means the loop stopped on a safety check; say which.
+1. Read haltReason and finished in the result first. plateau, max-rounds and budget are normal stops (finished is true); breakers-unavailable means nothing was tested; every other value is a safety halt, so say which and what it leaves behind. Compare the result's settings with what the user asked for.
 2. Run the judge in the worktree, bare, and show the output. Then run the checksum check against the manifest in the scratch directory and show that too.
 3. In the worktree run git status --porcelain and git diff --name-status BASE (the working tree against BASE, so uncommitted work counts too). After a clean finish the status is empty; after a halt it may not be, and you must say so. In the diff, modified and added source files are expected. Any deleted line, any modified existing test or config, and any added file under CI, git hook or tool-config locations (such as .github, .husky or a runner config) other than the regression tests listed in the result is a failure. The loop takes each regression test path from the fixer, so also check that every listed path is an ordinary test file: a listed "test" under .github, .husky or a config location is a failure too.
 4. Run the shared git state snapshot again and compare it with the file from Step 2. Any difference is a failure.
 5. List the loop's commits, and read each diff and its regression test yourself. A green judge is evidence, not proof: see [the judge protocol](references/judge-protocol.md).
+6. Re-run each reported reproducer on the fixed head (it must pass) and run each regression test against BASE in a temporary export of that commit (it must fail there). Agent-reported exit statuses are not enough.
 
-If you cannot run them, say "unverified" and give the user the exact commands and the output to expect. Only after steps 2 to 4 pass may you call a fixed-agent-verified finding fixed-verified.
+If you cannot run them, say "unverified" and give the user the exact commands and the output to expect. Only after items 1 to 6 pass may you call a fixed-agent-verified finding fixed-verified; that word then means the main session checked it, not that a human reviewed it.
 
 ## Step 5: report
 
-Group findings by outcome class and show each as one experiment card ([chaos principles](references/chaos-principles.md) explains the fields): the hypothesis in one sentence (if X happens at Y, the module should Z), the reproducer command, its two failing exit statuses, for a fault the evidence that it fired, and for fixes the commit, the regression test, and the verifier's checks.
+The result carries haltReason, finished, settings, counts, findings (each with reports, confirmOutput, verifierChecks and hostileTextSeen where they apply), commits with their regression tests, rounds (with lensesAsked, lensesAnswered and rejected), backlog and injectionSuspected. Group findings by outcome class and show each as one experiment card ([chaos principles](references/chaos-principles.md) explains the fields): the hypothesis in one sentence (if X happens at Y, the module should Z), the reproducer command, its two failing exit statuses, for a fault the evidence that it fired (confirmOutput), and for fixes the commit, the regression test, and the verifier's checks (verifierChecks).
 
 | Class | Meaning |
 | --- | --- |
-| fixed-agent-verified | Proven break, fix passed every check by the loop's agents, committed on the loop's branch; becomes fixed-verified only after Step 4 |
-| confirmed-unfixed | Proven break, fix not achieved; rejected attempts are kept under refs/chaos/rejected and in git stash, which is shared with the user's checkout, so tell them before they run stash pop |
-| superseded | Proven break whose reproducer passed again after an earlier fix (re-run in the same round, or carried over from the backlog), so it was not fixed separately |
-| lead | Plausible but not proven (flaky, not reachable through the contract, or its confirmer never answered) |
-| invalid | The reproducer failed for an unrelated reason |
+| fixed-agent-verified | Break confirmed by the loop's agents (two failing runs), fix passed every check by the loop's agents, committed on the loop's branch; becomes fixed-verified only after Step 4 |
+| confirmed-unfixed | Break confirmed by the loop's agents, fix not achieved; rejected attempts are kept under refs/chaos/rejected and in git stash, which is shared with the user's checkout, so tell them before they run stash pop |
+| superseded | Break whose reproducer passed again after an earlier fix: re-run in the same round after the fix, or a candidate carried over from the backlog that passed twice after commits. A carried-over one was seen failing earlier by its breaker, not confirmed by two runs. It was not fixed separately |
+| lead | Plausible but not confirmed: flaky, reachable but the failure does not match the claim, or its confirmer never answered |
+| invalid | The confirmer judged it not reachable through a public entry point or the documented contract |
 
 Also say what was not tested: lenses not run, lenses whose breakers stayed silent (the result lists lensesAsked and lensesAnswered per round), candidates still in the backlog (list them as leads), any injectionSuspected ids (tell the user the repository carries text aimed at agents), files outside the target, hidden oracles absent, and whether a sandbox was in place. Never write resilient, robust, secure, production-ready or handles faults. A stop on plateau means no further break was found within the caps, by these lenses, with this judge, and nothing more. Judge output can contain secrets and the scratch directory keeps it, so scan it before sharing anything and offer to delete it after review. End with the user's options: review and merge the branch, cherry-pick commits, or discard the worktree. Merging, pushing and deleting the worktree or branch are the user's decisions; do none of them.
 

@@ -59,10 +59,11 @@ After each round that committed fixes, a separate agent re-runs the judge and th
 | --- | --- |
 | fixed-agent-verified | Confirmed break, fix passed every check above according to the loop's agents, committed on the loop's own branch. It becomes fixed-verified only after the main session's own final checks pass |
 | confirmed-unfixed | Confirmed break, fix attempts exhausted or fixing disabled; the work of rejected attempts is kept under refs/chaos/rejected and in the git stash, which is shared with the primary checkout |
-| lead | Plausible but not proven (flaky, not reachable through the contract, or only partly matching the claim) |
-| invalid | The reproducer failed for a reason unrelated to the claim |
+| superseded | A break whose reproducer passed again after an earlier fix, found by a one-run recheck in the same round or by a carried-over backlog candidate that passed twice after commits; it was not fixed separately |
+| lead | Not confirmed: flaky, reachable but the failure does not match the claim, or its confirmer never answered |
+| invalid | The confirmer judged it not reachable through a public entry point or the documented contract |
 
-Report all four. A report that lists only successes hides the loop's real hit rate.
+Report all five. A report that lists only successes hides the loop's real hit rate.
 
 ## A green judge is evidence, not proof
 
@@ -86,10 +87,10 @@ Every command in the loop is run by an agent. Before telling the user anything i
 A linked worktree shares its git directory with the primary checkout, so anything an agent writes there can fire later in the user's own checkout. Save the output of this snapshot to a file before launching the loop and again after it ends, then compare the two files; the only acceptable difference is none (the filter already excludes the loop's own branches, rejected-attempt refs and stash):
 
 ```bash
-snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" 2>/dev/null; }
+snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list | sed -E 's#(://)[^/@]*@#\1***@#'; git -C "$REPO" config --worktree --list 2>/dev/null | sed -E 's#(://)[^/@]*@#\1***@#'; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" "$g/info/attributes" 2>/dev/null; ls -1 "$g/worktrees" 2>/dev/null; }
 ```
 
-REPO is the primary checkout. Hooks, local config, other branches' refs and the ignore file in the git directory are all in the snapshot. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
+REPO is the primary checkout. Hooks, local and worktree config (with credentials in remote URLs masked), other branches' refs, the ignore and attributes files and the list of linked worktrees in the git directory are all in the snapshot. Keep the saved file outside the scratch directory with mode 600. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
 
 ## Optional: judge-integrity canary
 

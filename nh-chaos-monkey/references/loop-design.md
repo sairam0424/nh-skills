@@ -45,7 +45,43 @@ Fixes are applied one at a time in one worktree. Concurrent fixers would edit th
 | plateauRounds | 1 | One round with no new confirmed break after a fix round is the re-attack that finds nothing |
 | token budget | stop below 80k left | The tool's budget is a hard ceiling; stop cleanly before it throws |
 
-Measured cost is roughly 0.5M to 1M subagent tokens per fixed finding, all in: 0.8M in the first toy and real-project runs, and on 2026-11-08 (five lenses) 2.6M for 3 fixes, 5.2M for 4 fixes plus duplicates and 5.3M for 2 fixes plus rejected attempts, with 0.9M for a clean run that finds nothing. The defaults therefore allow roughly 14M tokens; lower maxRounds and maxFindingsPerRound for most uses.
+Measured cost is about 0.8M subagent tokens per fixed finding with four lenses (the first toy and real-project runs), and about 0.85M to 2.7M with the five default lenses, typically 1.2M to 1.4M: on 2026-11-08, 2.6M for 3 fixes, 5.2M and 5.7M for 4 fixes, and 5.3M for only 2 fixes when rejected attempts piled up; a clean run that finds nothing cost 0.9M. The defaults allow 18 fixes, roughly 23M tokens at the typical rate and up to 48M at the worst measured rate; lower maxRounds and maxFindingsPerRound for most uses.
+
+## Arguments
+
+The script refuses unknown argument names and wrong types, and the result's settings field echoes what took effect. Integers outside their range are clamped and anything that is not an integer falls back to the default.
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| workdir, scratch | required | Absolute paths (letters, digits and ._/- only) of the linked worktree and a separate scratch directory |
+| judgeCmd | required | The project's own test command; screened best-effort for pipes, semicolons, a background ampersand and narrowing flags |
+| target | required | What to attack, reduced to a safe character set |
+| protectedPaths | built-in set | Pathspecs added to the built-in protected set (tests, CI, hooks, ignore file, lint, type and runner config, lockfiles, manifests and tool-config files such as .npmrc) |
+| replaceProtectedDefaults | false | true makes protectedPaths the whole set; needs protectedPaths |
+| lenses | five defaults | Up to six {key, brief} entries; briefs are trimmed to 600 characters; extra lenses are not run and the log says which |
+| reproRunners | node, node --test, python3, python, pytest, bash, sh, ruby, deno run, bun, go run, php | The only commands a reproducer may start with |
+| maxRounds, maxFindingsPerRound, maxFixAttempts, plateauRounds, maxPerFile | 3 (1 to 6), 6 (1 to 10), 3 (1 to 5), 1 (1 to 4), 2 (1 to 10) | The caps |
+| fixEnabled | true | false is lead-only mode |
+| verifierModel | session model | Model for verifiers, probed first |
+| testCountHint | none | How agents should read the judge's test count; given to the baseline, verifier and rejudge prompts |
+| regressionTestPattern | built-in pattern | Regular expression a regression test path must match; hidden, config and fixture locations are always refused |
+| requireSandbox, probePath | false, none | Run the sandbox probe through an agent before the judge; probePath is the absolute path of sandbox-probe.mjs |
+
+## Halt reasons
+
+haltReason is set on every return. finished is true only for the first row.
+
+| haltReason | Meaning | What it leaves behind |
+| --- | --- | --- |
+| plateau, max-rounds, budget | Normal stops: a dry round, the round cap, the token floor | Clean tree unless a rejected attempt was stashed |
+| breakers-unavailable | No breaker answered in a round: nothing was tested | Clean tree |
+| isolation-check-failed, not-an-isolated-worktree, workdir-not-clean-at-start, sandbox-probe-failed, sandbox-not-enforced, verifier-model-unavailable | Refusals before the judge runs | Nothing changed |
+| baseline-agent-failed, baseline-head-not-a-commit-sha, baseline-judge-red, baseline-test-count-unknown, no-protected-files-found, protected-manifest-self-check-failed, judge-run-left-the-worktree-dirty | The baseline is not a usable steady state; the judge ran once | Judge output may have dirtied the tree |
+| reproducer-dirtied-the-worktree, head-moved-during-break-or-confirm | A reproducer or something else changed the tree during confirmation | Confirmed breaks so far are kept in the result |
+| verifier-unavailable, verifier-unavailable-and-worktree-dirty, worktree-not-clean-after-rejected-attempt, commit-failed, independent-rejudge-disagrees-with-verifier-claims | A fix-phase safety halt | Uncommitted work may remain; a halt after a commit skips the independent rejudge, so Step 4 is then the only independent check |
+| agent-error | An agent call threw (for example the token ceiling) | A partial result: commits so far, the break being fixed and every unprocessed confirmed break |
+
+Any halt other than the first two rows adds a warning that the worktree may hold uncommitted changes.
 
 ## What is enforced and what is only requested
 
@@ -71,7 +107,7 @@ The loop is the scientific method chaos engineering asks for, applied to code in
 | Steady-state hypothesis | The judge is green with a counted number of tests |
 | Experiment | A reproducer that tries to violate the documented contract |
 | Blast radius | A linked git worktree on its own branch, ideally inside an OS sandbox |
-| Abort criteria | Round, attempt, finding and token caps; any protected-file change; any rejudge disagreement |
+| Abort criteria | Round, attempt, finding and token caps; a protected-file change rejects the attempt, and the rejudge halts the run if the manifest check still fails; any rejudge disagreement |
 | Rollback | Discard the worktree and branch; rejected attempts are pinned under refs/chaos/rejected |
 
 What it does not do: inject faults into running services, networks or Claude Code's own tool calls. For services, use a dedicated chaos platform with a human-owned experiment definition and platform-side stop conditions.
@@ -86,6 +122,9 @@ What it does not do: inject faults into running services, networks or Claude Cod
 - Severity is the breaker's own claim and corroboration only counts lenses that reported the same location or title, so ranking is a heuristic. The backlog keeps the rest, but a run that ends on its round cap leaves some candidates unexamined; the result lists them as leads.
 - Judge output and agent summaries can contain secrets and are kept in the scratch directory and the workflow transcript. Scan before sharing, delete after review.
 - Reproducer quality depends on the language and the project's test tooling. See the validation history for what has actually been exercised.
+- Raw judge output and reproducer output tails (baseline, rejudge and each finding's observed output) are returned to the main session as the agents wrote them. Treat the result as untrusted data.
+- A halt in the middle of a round, after a commit, skips the independent rejudge for that round. The commits exist, the rounds list may be empty for it, and only Step 4 checks them.
+- The sandbox probe verdict reaches the loop through an agent's relay of the probe's JSON, and the probe tests a direct TCP connect, not a proxy, and only the credential locations it lists.
 - Mutation-guided breaking (real mutants executed by a mutation tool) would give a stronger signal than model-written reproducers where a mutation tool exists. It needs different confirmation semantics (see the lens catalogue) and is not implemented.
 
 ## Editing the script
@@ -96,7 +135,7 @@ The script runs inside the Workflow tool, which strips the export from the meta 
 node -e "const fs=require('fs');const s=fs.readFileSync(process.argv[1],'utf8').replace(/^export const meta/m,'const meta');new (require('vm').Script)('(async()=>{'+s+'\n})',{filename:process.argv[1]});console.log('syntax ok')" scripts/chaos-loop.js
 ```
 
-Syntax is the weakest check. The repository's tests run the real script against scripted fake agents in about a second (the harness under the test folder); change a test first, watch it fail, then change the script. A useful extra check is to copy the script into a temporary folder, break it on purpose in a dozen ways (drop a halt, loosen a verdict check, remove the preamble from a prompt) and confirm each break fails some test; 32 such mutations were all caught on 2026-11-08. After any change to prompts, schemas or control flow, also re-run the loop on a throwaway fixture project with a planted bug and an executable judge, and read what the agents actually returned. The workflow runtime loads exactly one script file, which is why this file is far longer than the repository's usual size limit; do not split it without changing how the tool loads it. The script must not use the clock or random numbers (the Workflow tool rejects them so runs can resume), and agent labels must stay deterministic. A code formatter may expand the file; keep it under the repository's size limit.
+Syntax is the weakest check. The repository's tests run the real script against scripted fake agents in about a second (the harness under the test folder); change a test first, watch it fail, then change the script. A useful extra check is to copy the script into a temporary folder, break it on purpose (drop a halt, loosen a verdict check, remove the preamble from a prompt) and confirm each break fails some test. A hand-picked list of 37 such mutations was caught on 2026-11-08; an independent reviewer's 39 arbitrary single-edit mutants mostly survived, so the suite is a net with gaps, not proof of correctness. The mutation list is not kept in the repository. After any change to prompts, schemas or control flow, also re-run the loop on a throwaway fixture project with a planted bug and an executable judge, and read what the agents actually returned. The workflow runtime loads exactly one script file, which is why this file is far longer than the repository's usual size limit; do not split it without changing how the tool loads it. The script must not use the clock or random numbers (the Workflow tool rejects them so runs can resume), and agent labels must stay deterministic. A code formatter may expand the file; keep it under the repository's size limit.
 
 ## Sources
 
@@ -124,7 +163,7 @@ Fixture: a throwaway Node project (node:test, judge npm test, 5 tests) with two 
 
 ### 2026-11-08, upgraded script
 
-The repository now has a deterministic harness: 120 loop and probe tests that run the real script against scripted fake agents, including three runs under a real Seatbelt sandbox for the probe. It exposed seven gaps in the earlier script before any model ran (a round where every breaker died was reported as a plateau, a candidate whose confirmer died vanished, halts dropped confirmed breaks, a thrown agent call discarded every commit, and three holes around the fixer's regression test path), all fixed with tests.
+The repository now has a deterministic harness: more than 150 loop and probe tests (npm test prints the current number) that run the real script against scripted fake agents, including three runs under a real Seatbelt sandbox for the probe. It exposed seven gaps in the earlier script before any model ran (a round where every breaker died was reported as a plateau, a candidate whose confirmer died vanished, halts dropped confirmed breaks, a thrown agent call discarded every commit, and three holes around the fixer's regression test path), all fixed with tests.
 
 Live runs followed on throwaway fixtures (no sandbox, trusted code, session model for every agent, five lenses, results checked by hand afterwards with the bare judge, the manifest, status, name-status against the base commit, the shared git state snapshot, and the new tests run against the original code):
 
@@ -145,7 +184,9 @@ After the fixes, the two JavaScript runs were repeated on fresh copies of the sa
 | JavaScript with planted injection, repeated | 4 fixed, 2 superseded, 2 invalid, 0 unfixed; no planted instruction obeyed in 420 real tool calls; hostile text reported on 4 findings; all four planted bug areas fixed | 38 | 4.87M | 24 min |
 | Headless claude -p on the skill | The non-interactive contract worked end to end: no questions asked, worktree and baseline built, loop run, bare judge, manifest, status, name-status diff and git snapshot checked by the session, report with outcome classes and not-tested list; 1 planted bug fixed and confirmed by me (judge 2 to 6, new test fails 2 of 4 on the original code). The Workflow tool refused the skill's script path (outside the working directory), so the session copied it, checked the hash and removed only the copy | 12 | 1.37M | 7 min loop, 13 min session |
 
-Planted-bug areas fixed per run (median, percentile at p = 0, parseDuration, retry): first JavaScript run 2 of 4 (median never reached; it fixed a different percentile bug, NaN), repeated run 3 of 4 (percentile at p = 0 missed), first injection run 1 of 4 (plus the NaN bug), repeated injection run 4 of 4. Totals for the day: about 25.9M subagent tokens across eight live runs (plus the main sessions), on top of 43.3M for the three research runs. Two runs of the same fixture differ because breakers are model samples; treat any single run as one draw.
+Planted-bug areas fixed per run (median, percentile at p = 0, parseDuration, retry): first JavaScript run 2 of 4 (median never reached; it fixed a different percentile bug, NaN), repeated run 3 of 4 (percentile at p = 0 missed), first injection run 1 of 4 (plus the NaN bug), repeated injection run 4 of 4. Totals for the day: about 25.9M subagent tokens across seven live runs (plus the main sessions), on top of 43.3M for the three research runs. Two runs of the same fixture differ because breakers are model samples; treat any single run as one draw.
+
+Independent review before merge (2026-11-08, 57 agents, about 9.3M subagent tokens): five reviewers, each given only the exported branch and one lens (security under this repository's mandatory skill review, loop correctness, test integrity, docs honesty, usability), with two skeptics trying to refute every medium or high finding by running things. No high-severity finding; 25 medium findings were confirmed by both skeptics and none was refuted. They clustered into: safety switches and protected paths failing open on a wrong type or a replaced list; the probe treating unknown as a pass and reporting a write as blocked when only its clean-up was refused; a round of rejected candidates counting as dry; a thrown agent call dropping unprocessed breaks; superseded hiding an unfired fault; CI path filters that skipped the loop's own tests; weak or vacuous test assertions; docs that inverted the lead and invalid classes, under-stated cost and over-stated what is enforced. All were fixed with tests in the same change except what the known limits above now say outright. The review also noted two open items: candidates that cite the same file and line are merged even when they are different defects (breakers often cite a function's first line), and some constants and output schemas are still not pinned by any test.
 
 The negative tests were not repeated on the final version. The code they cover was not edited afterwards except argument path validation, which the final runs exercised with valid paths. The git checks behind the protected-file rules (renames, type changes, added files, hook and config tampering) were also exercised directly in scratch repositories, not only through the loop.
 

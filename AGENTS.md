@@ -70,7 +70,7 @@ nh-skills/
   test/
     validate-skills.test.mjs   — fixture-based self-tests (node:test)
   .github/workflows/
-    validate-skills.yml       — CI job, triggers on **/SKILL.md changes
+    validate-skills.yml       — CI job, triggers on **/SKILL.md, **/scripts/**, **/references/**, test and fixture changes
   <skill-name>/
     SKILL.md                   — one per skill
     scripts/ references/ assets/ (optional, per skill)
