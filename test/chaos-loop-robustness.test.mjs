@@ -29,15 +29,15 @@ test("a round where some lenses never answered is not counted as dry", async () 
   });
   assert.notEqual(result.haltReason, "plateau");
   assert.equal(result.haltReason, "max-rounds");
-  assert.equal(result.rounds[0].lensesAsked, 4);
-  assert.equal(result.rounds[0].lensesAnswered, 3);
+  assert.equal(result.rounds[0].lensesAsked, 5);
+  assert.equal(result.rounds[0].lensesAnswered, 4);
 });
 
 test("a full round of answers with nothing found is still a plateau, with coverage recorded", async () => {
   const { result } = await runLoop({ args: baseArgs() });
   assert.equal(result.haltReason, "plateau");
-  assert.equal(result.rounds[0].lensesAsked, 4);
-  assert.equal(result.rounds[0].lensesAnswered, 4);
+  assert.equal(result.rounds[0].lensesAsked, 5);
+  assert.equal(result.rounds[0].lensesAnswered, 5);
 });
 
 test("a candidate whose confirmer died is kept as a lead, not silently dropped", async () => {
