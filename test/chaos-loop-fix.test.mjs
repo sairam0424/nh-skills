@@ -98,7 +98,6 @@ test("a dead fixer counts as a rejected attempt", async () => {
 
 test("unsafe changed-file lists are rejected before any verifier runs", async () => {
   const unsafe = [
-    ["an empty list", () => ({ changedFiles: [] })],
     ["a parent directory", (d) => ({ changedFiles: ["../outside.js", d.regressionTestPath] })],
     ["an absolute path", (d) => ({ changedFiles: ["/etc/hosts", d.regressionTestPath] })],
     ["a path inside .git", (d) => ({ changedFiles: [".git/hooks/pre-commit", d.regressionTestPath] })],

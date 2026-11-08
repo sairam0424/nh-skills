@@ -110,3 +110,13 @@ test("numeric caps are clamped, non-integers fall back to defaults", async () =>
   assert.equal(await maxRoundsSeen(2.5), 3);
   assert.equal(await maxRoundsSeen("4"), 3);
 });
+
+test("a lens brief keeps up to 600 characters so a rule at its end is not cut off", async () => {
+  const { calls } = await runLoop({
+    args: baseArgs({ lenses: [{ key: "long", brief: "x".repeat(550) + " END-MARKER" }, { key: "cut", brief: "y".repeat(700) + " LOST-MARKER" }] }),
+  });
+  const kept = calls.find((c) => c.label === "break:R1:long").prompt;
+  const cut = calls.find((c) => c.label === "break:R1:cut").prompt;
+  assert.match(kept, /END-MARKER/);
+  assert.doesNotMatch(cut, /LOST-MARKER/);
+});

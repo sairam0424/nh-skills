@@ -30,6 +30,7 @@ test("a clean run fixes one break, rejudges, then stops on plateau", async () =>
     "break:R1:state-order",
     "break:R1:error-paths",
     "break:R1:contract",
+    "break:R1:faults",
     "confirm:R1-1",
     "fix:R1-1:a1",
     "verify:R1-1:a1:t1",
@@ -39,6 +40,7 @@ test("a clean run fixes one break, rejudges, then stops on plateau", async () =>
     "break:R2:state-order",
     "break:R2:error-paths",
     "break:R2:contract",
+    "break:R2:faults",
   ]);
   assert.deepEqual(phases.slice(0, 5), ["Baseline", "Break", "Confirm", "Fix", "Rejudge"]);
 });

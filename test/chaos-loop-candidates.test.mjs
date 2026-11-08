@@ -109,7 +109,7 @@ test("a finding seen in an earlier round is not proposed again later", async () 
   assert.equal(result.findings.length, 2);
 });
 
-test("only the highest-severity candidates are pursued when the cap is hit, and the cut is logged", async () => {
+test("only the highest-severity candidates are pursued when the cap is hit, and the cut is logged and kept", async () => {
   const plan = {
     "R1:boundaries": [
       finding(1, { severity: "low" }),
@@ -124,7 +124,8 @@ test("only the highest-severity candidates are pursued when the cap is hit, and 
   });
   assert.deepEqual(callsFor(calls, "confirm:").map((c) => c.label), ["confirm:R1-1", "confirm:R1-2"]);
   assert.deepEqual(result.findings.map((f) => f.file), ["src/m2.js", "src/m4.js"]);
-  assert.ok(logs.some((l) => /2 lower-severity candidate\(s\) not pursued/.test(l)), logs.join("\n"));
+  assert.ok(logs.some((l) => /2 candidate\(s\) kept for the next round/.test(l)), logs.join("\n"));
+  assert.deepEqual(result.backlog.map((b) => b.file).sort(), ["src/m1.js", "src/m3.js"]);
 });
 
 test("a breaker that returns nothing does not stop the other lenses", async () => {

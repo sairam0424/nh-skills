@@ -140,6 +140,7 @@ function defaultResponse(call, world) {
       dirty: false,
     };
   if (label === "probe-verifier-model") return { reply: "ok" };
+  if (label === "sandbox-probe") return { verdict: "enforced", allowed: [] };
   let m = /^break:(R\d+):(.+)$/.exec(label);
   if (m) {
     const specs = world.plan[m[1] + ":" + m[2]] || [];
@@ -182,10 +183,13 @@ function defaultResponse(call, world) {
       protectedTouched: [],
       testsWeakened: false,
       specialCased: false,
+      hostileTextSeen: false,
       rootCause: true,
       reasons: [],
       outputTail: "pass",
     };
+  m = /^recheck:(.+)$/.exec(label);
+  if (m) return { exit: 1, reproSha: h64(m[1]), headSha: world.head, workdirDirty: false };
   if (/^commit:/.test(label)) return { sha: hexSha(100 + world.commits), clean: true };
   if (/^reset:/.test(label)) return { stashRef: "refs/chaos/rejected/x", clean: true };
   if (/^rejudge:/.test(label))
