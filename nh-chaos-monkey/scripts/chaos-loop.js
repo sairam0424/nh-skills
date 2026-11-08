@@ -746,6 +746,9 @@ async function run() {
     // independent report counts as corroboration. Nothing is thrown away silently: what the
     // caps leave out waits in the backlog for the next round and is listed in the result.
     const earlier = new Set(state.seen);
+    const betterRep = (a, b) =>
+      Number(Boolean(a.carried)) - Number(Boolean(b.carried)) ||
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
     const byKey = new Map();
     const groups = [];
     const addCandidate = (c, reports) => {
@@ -755,14 +758,15 @@ async function run() {
       const group = hit || { rep: c, reports: 0, keys: [] };
       if (!hit) groups.push(group);
       group.reports += reports;
-      if (hit && SEVERITY_RANK[c.severity] < SEVERITY_RANK[group.rep.severity])
-        group.rep = c;
+      if (hit && betterRep(c, group.rep) < 0) group.rep = c;
       keys.forEach((k) => {
         byKey.set(k, group);
         if (!group.keys.includes(k)) group.keys.push(k);
       });
     };
-    state.backlog.forEach((g) => addCandidate(g.rep, g.reports));
+    state.backlog.forEach((g) =>
+      addCandidate({ ...g.rep, carried: true }, g.reports),
+    );
     proposed.filter(Boolean).forEach((c) => addCandidate(c, 1));
     const ranked = [...groups].sort(
       (a, b) =>
@@ -838,13 +842,25 @@ async function run() {
           : flaky || r.legit
             ? "lead"
             : "invalid";
+        // A candidate that waited in the backlog was seen failing before the
+        // fixes since committed; passing twice now means a fix removed it.
+        const gone =
+          f.carried &&
+          r.exit1 === 0 &&
+          r.exit2 === 0 &&
+          state.commits.length > 0;
         return {
           ...f,
           exit1: r.exit1,
           exit2: r.exit2,
           reproSha: r.reproSha,
-          class: cls,
-          confirmNote: clean(r.reason, 300),
+          class: gone ? "superseded" : cls,
+          confirmNote: clean(
+            (gone
+              ? "carried over from an earlier round; its reproducer passes at the current head, so an earlier fix removed it. "
+              : "") + r.reason,
+            300,
+          ),
         };
       }),
       ...picked
