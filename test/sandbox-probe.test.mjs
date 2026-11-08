@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { tryCreate } from "../nh-chaos-monkey/scripts/sandbox-probe.mjs";
+import { cleanGitEnv, minimalGitEnv } from "./support/git-env.mjs";
 
 const PROBE = fileURLToPath(new URL("../nh-chaos-monkey/scripts/sandbox-probe.mjs", import.meta.url));
 const SANDBOX_EXEC = "/usr/bin/sandbox-exec";
@@ -20,8 +21,6 @@ const NEEDS_PERMISSIONS =
 // The probe looks for secret-looking variable names. Build one at run time so no literal sits in this file.
 const SECRET_NAME = ["MY", "API", "TOKEN"].join("_");
 const SECRET_VALUE = "v".repeat(24);
-// Git must not read the developer's own configuration (signing, hooks path, templates).
-const GIT_ENV = { GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
 
 // A throwaway repository with a linked worktree and a fake home that holds fake credential files.
 function makeWorld(t) {
@@ -38,7 +37,7 @@ function makeWorld(t) {
   const git = (...args) =>
     execFileSync("git", ["-C", repo, "-c", "user.email=t@example.invalid", "-c", "user.name=t", ...args], {
       stdio: "ignore",
-      env: { ...process.env, ...GIT_ENV },
+      env: cleanGitEnv(),
     });
   git("init", "-q");
   git("commit", "-q", "--allow-empty", "-m", "init");
@@ -56,7 +55,7 @@ const listing = (dir) => fs.readdirSync(dir, { recursive: true }).sort();
 
 function runProbe(world, { sandboxProfile, net: target, env = {} } = {}) {
   const args = [PROBE, "--workdir", world.wt, "--scratch", world.scratch, "--net", target, "--json"];
-  const childEnv = { PATH: process.env.PATH, HOME: world.home, ...GIT_ENV, ...env };
+  const childEnv = minimalGitEnv({ HOME: world.home, ...env });
   const [cmd, argv] = sandboxProfile
     ? [SANDBOX_EXEC, ["-p", sandboxProfile, process.execPath, ...args]]
     : [process.execPath, args];
