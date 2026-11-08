@@ -17,10 +17,10 @@ nh-skills/
 ├── anti-patterns.md                 recurring-bad-pattern catalog (empty so far)
 ├── Branches.md                      branch/commit/PR strategy, copied verbatim from Not-Humans-Lab
 ├── package.json                    declares js-yaml devDependency + npm scripts (validate, test)
-├── nh-breaker/                      the one shipped skill (merged via PR #4)
-│   ├── SKILL.md                    bounded breaker-loop skill (find, fix, re-verify)
+├── nh-chaos-monkey/                 the one shipped skill (merged via PR #4 as nh-breaker)
+│   ├── SKILL.md                    bounded chaos-monkey loop skill (find, fix, re-verify)
 │   ├── references/                 judge protocol and loop design
-│   └── scripts/                    breaker-loop.js, a Claude Code Workflow script
+│   └── scripts/                    chaos-loop.js, a Claude Code Workflow script
 ├── scripts/
 │   └── validate-skills.mjs         the validator — the only tooling layer
 ├── fixtures/

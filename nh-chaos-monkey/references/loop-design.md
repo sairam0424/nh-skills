@@ -28,7 +28,7 @@ Fixes are applied one at a time in one worktree. Concurrent fixers would edit th
 
 ## Phases
 
-1. Baseline. A cheap isolation probe runs first, before any project code executes: the workdir must be a linked worktree (its git directory differs from the common one) on a branch starting with breaker/, with a clean tree. Only then does the judge run; it must be green with a test count of at least 1, and the protected manifest must list files and pass its own check. If a verifier model was requested, a one-word probe must succeed with it. Otherwise the loop stops before attacking anything.
+1. Baseline. A cheap isolation probe runs first, before any project code executes: the workdir must be a linked worktree (its git directory differs from the common one) on a branch starting with chaos/, with a clean tree. Only then does the judge run; it must be green with a test count of at least 1, and the protected manifest must list files and pass its own check. If a verifier model was requested, a one-word probe must succeed with it. Otherwise the loop stops before attacking anything.
 2. Break. One breaker per lens, in parallel. Every candidate is validated by the script: the reproducer must live in that lens's scratch folder with a plain file name, the command must be exactly an allowed runner followed by that path, the source path must be a safe relative path, and the observed exit status must be positive. Text fields are reduced to a safe character set and length. Candidates are de-duplicated across lenses and rounds, then capped per round, highest severity first. Rejections and the number dropped by the cap are logged.
 3. Confirm. Two separate reproducer runs plus the legitimacy gate, the reproducer hash, and a check that HEAD has not moved. A reproducer that leaves files in the worktree halts the loop.
 4. Fix. Per confirmed break: up to maxFixAttempts rounds of fixer then verifier. If a verifier returns nothing twice the loop halts as verifier-unavailable instead of spending more attempts, because an outage is not a rejected fix. A rejected attempt is stashed and also pinned under a named ref, so the next attempt starts from the last verified commit and must take a different approach, with the verifier's reasons passed back. A verified fix is committed atomically from a message file, with repository hooks disabled for that commit.
@@ -50,7 +50,7 @@ Measured cost is about 0.8M subagent tokens per fixed finding, all in, in both t
 
 | Property | Mechanism | Strength |
 | --- | --- | --- |
-| Worktree on a breaker/* branch, not the primary checkout | Script reads git directories and branch from the isolation probe agent and halts before the judge runs | Checked, but the values come from an agent |
+| Worktree on a chaos/* branch, not the primary checkout | Script reads git directories and branch from the isolation probe agent and halts before the judge runs | Checked, but the values come from an agent |
 | Judge green, counted tests, manifest self-check | Script compares returned integers | Checked, same caveat |
 | Reproducer and command shape, safe paths, text charset | Script validates strings before using them | Enforced in code |
 | Judge command screened for pipes, semicolons, a background ampersand and common narrowing flags | Script refuses the run on a match | Best-effort denylist (it misses many narrowing options); the user's confirmation in Step 1 is the real control |
@@ -71,7 +71,7 @@ The loop is the scientific method chaos engineering asks for, applied to code in
 | Experiment | A reproducer that tries to violate the documented contract |
 | Blast radius | A linked git worktree on its own branch, ideally inside an OS sandbox |
 | Abort criteria | Round, attempt, finding and token caps; any protected-file change; any rejudge disagreement |
-| Rollback | Discard the worktree and branch; rejected attempts are pinned under refs/breaker/rejected |
+| Rollback | Discard the worktree and branch; rejected attempts are pinned under refs/chaos/rejected |
 
 What it does not do: inject faults into running services, networks or Claude Code's own tool calls. For services, use a dedicated chaos platform with a human-owned experiment definition and platform-side stop conditions.
 
@@ -91,7 +91,7 @@ What it does not do: inject faults into running services, networks or Claude Cod
 The script runs inside the Workflow tool, which strips the export from the meta declaration and wraps the rest in an async function, so top-level await and return are legal there but a plain `node --check` rejects the file. Check syntax the same way the tool loads it:
 
 ```bash
-node -e "const fs=require('fs');const s=fs.readFileSync(process.argv[1],'utf8').replace(/^export const meta/m,'const meta');new (require('vm').Script)('(async()=>{'+s+'\n})',{filename:process.argv[1]});console.log('syntax ok')" scripts/breaker-loop.js
+node -e "const fs=require('fs');const s=fs.readFileSync(process.argv[1],'utf8').replace(/^export const meta/m,'const meta');new (require('vm').Script)('(async()=>{'+s+'\n})',{filename:process.argv[1]});console.log('syntax ok')" scripts/chaos-loop.js
 ```
 
 Syntax is the weakest check. After any change to prompts, schemas or control flow, re-run the loop on a throwaway fixture project with a planted bug and an executable judge, and read what the agents actually returned. The script must not use the clock or random numbers (the Workflow tool rejects them so runs can resume), and agent labels must stay deterministic. A code formatter may expand the file; keep it under the repository's size limit.
@@ -107,6 +107,8 @@ Syntax is the weakest check. After any change to prompts, schemas or control flo
 - [Principles of Chaos Engineering](https://principlesofchaos.org/) and [ChaosEater](https://arxiv.org/abs/2511.07865): hypothesis, experiment, analysis, improvement.
 
 ## Validation history
+
+Renamed on 2026-11-08 from nh-breaker to nh-chaos-monkey: the folder, command and script (now chaos-loop.js), the branch prefix (breaker/ became chaos/) and the rejected-attempt refs (refs/breaker/rejected became refs/chaos/rejected). The roles keep their names: breaker, confirmer, fixer, verifier. Rows below that mention the skill were written under the old name and are shown with the new one.
 
 Fixture: a throwaway Node project (node:test, judge npm test, 5 tests) with two planted bugs, a dropped trailing chunk and a missing zero-total guard. A third real bug, float error in tie rounding, was found by the loop and not planted. Runs used two lenses (one for the lead-only run), at most two rounds, and the session model for every agent. The fixture lived in its own temporary repository outside any real project, and the session was not sandboxed.
 
