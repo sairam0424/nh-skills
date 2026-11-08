@@ -96,7 +96,7 @@ Any halt other than the first two rows adds a warning that the worktree may hold
 | No network, no push, no reading secrets, fixer write scope, no writes in .git | Preamble in every prompt | Requested only |
 | Real isolation | OS sandbox chosen by the user | Not provided here |
 
-Agents are language models running shell commands, so every "checked" row means the script checked what an agent said it saw. The main session's final run of the judge, the manifest check and the name-status diff against the base commit are what turn the loop's output into proof.
+Agents are language models running shell commands, so every "checked" row means the script checked what an agent said it saw. The main session's final run of the judge, the manifest check and the name-status diff against the base commit, plus each fix's reproducer re-run and its regression test run on the tree just before the fix, are what turn the loop's output into proof.
 
 ## Mapping to chaos engineering
 
