@@ -66,6 +66,8 @@ Leave verifierModel unset unless the user wants a different model family for the
 
 The default lenses are boundaries, state-order, error-paths, contract and faults. The [lens catalogue](references/lens-catalogue.md) lists the optional ones and how to write your own. The faults lens adds about a fifth to each round's cost.
 
+The Workflow tool only loads script files the session can already read: the working directory or an added directory. If it refuses the skill's script path, which happens in claude -p when the skill sits in a plugin or skills folder outside the working directory, start the session with --add-dir for the skill folder, or copy the script into the working directory, confirm with shasum that the copy is byte-identical, run it from there and remove only that copy.
+
 If the Workflow tool is unavailable, follow the same phases by hand with fresh, non-fork subagents: one breaker per lens writing reproducers, a confirmer that runs each twice, one fixer at a time, a verifier that runs the commands in the judge protocol, and a final judge run. Keep the same caps. Read [the loop design](references/loop-design.md) for the roles and why they are separate.
 
 ## Step 4: prove it yourself
@@ -88,7 +90,7 @@ Group findings by outcome class and show each as one experiment card ([chaos pri
 | --- | --- |
 | fixed-agent-verified | Proven break, fix passed every check by the loop's agents, committed on the loop's branch; becomes fixed-verified only after Step 4 |
 | confirmed-unfixed | Proven break, fix not achieved; rejected attempts are kept under refs/chaos/rejected and in git stash, which is shared with the user's checkout, so tell them before they run stash pop |
-| superseded | Proven break whose reproducer passed again after an earlier fix in the same round, so it was not fixed separately |
+| superseded | Proven break whose reproducer passed again after an earlier fix (re-run in the same round, or carried over from the backlog), so it was not fixed separately |
 | lead | Plausible but not proven (flaky, not reachable through the contract, or its confirmer never answered) |
 | invalid | The reproducer failed for an unrelated reason |
 
