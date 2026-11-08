@@ -38,7 +38,7 @@ Once installed, a skill activates in one of two ways:
    npm run validate
    ```
 
-4. Open a PR. CI re-runs the same validator (plus its own self-tests) on every PR that touches a `SKILL.md` file, so anything that fails locally will fail in CI too.
+4. Open a PR. CI re-runs the same validator (plus its own self-tests) on every PR that touches a `SKILL.md` file, a skill's `scripts/` or `references/` folder, the validator, the tests or the fixtures, so anything that fails locally will fail in CI too.
 
 This is a personal collection rather than a large open-source project, so there's no separate `CONTRIBUTING.md` — the steps above are the whole process. Keep each skill focused on one task, keep the `description` clear about *when* to use it, and push any lengthy detail into a referenced file instead of inlining it in `SKILL.md` (progressive disclosure).
 

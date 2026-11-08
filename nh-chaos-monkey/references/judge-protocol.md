@@ -59,10 +59,24 @@ After each round that committed fixes, a separate agent re-runs the judge and th
 | --- | --- |
 | fixed-agent-verified | Confirmed break, fix passed every check above according to the loop's agents, committed on the loop's own branch. It becomes fixed-verified only after the main session's own final checks pass |
 | confirmed-unfixed | Confirmed break, fix attempts exhausted or fixing disabled; the work of rejected attempts is kept under refs/chaos/rejected and in the git stash, which is shared with the primary checkout |
-| lead | Plausible but not proven (flaky, not reachable through the contract, or only partly matching the claim) |
-| invalid | The reproducer failed for a reason unrelated to the claim |
+| superseded | A break whose reproducer passed again after an earlier fix, found by a one-run recheck in the same round or by a carried-over backlog candidate that passed twice after commits; it was not fixed separately |
+| lead | Not confirmed: flaky, reachable but the failure does not match the claim, or its confirmer never answered |
+| invalid | The confirmer judged it not reachable through a public entry point or the documented contract |
 
-Report all four. A report that lists only successes hides the loop's real hit rate.
+Report all five. A report that lists only successes hides the loop's real hit rate.
+
+## A green judge is evidence, not proof
+
+In the manual review in the SoK on DARPA's AIxCC competition (arXiv 2602.07666, 2026), patches from the authors' own reference runs that passed build, proof-of-vulnerability replay and the project's tests were still judged semantically wrong in 37.7% (20 of 53) of cases for one agent and 45.6% (26 of 57) for another. Those are small lab samples, so read them as a warning, not a rate. What follows for this skill:
+
+- A fix is only fixed-agent-verified. The independent verifier, the rejudge and the main session each add a check, and none of them replaces reading the diff.
+- Confirmation is a separate, executed step. A finder's own crash or claim is never enough: Google's OSS-Fuzz-Gen work reports that validating crashes from generated fuzz drivers against realistic entry points removed more than half of the crashes first classed as program errors.
+- Skepticism has to be built in. Anthropic reports that LLM evaluators stay lenient toward LLM output and that tuning a separate evaluator to be skeptical is more tractable than making a generator self-critical. The verifier here runs commands and reports numbers; the diff-review fields (rootCause, testsWeakened, specialCased) are model judgement, so the main session reads the diff itself.
+- Telling an agent not to edit tests is weak. Anthropic's long-running harness forbids it by instruction only, with nothing hashing or locking the tests. This loop hashes the protected files and diffs them against the base commit, which is the stronger form.
+- When a known-good implementation exists, differential comparison against it is the best oracle (Anthropic's C compiler project used GCC this way). The oracle lens in the lens catalogue is for that case.
+- A regression gate matters. In the same project the agents began to break existing behaviour late in the work, so the full judge runs after every fix, in the verifier and again in the rejudge.
+
+Not established by the research: how often fixers tamper with judges in loops like this one, and any held-out oracle or judge canary design that has been tested rather than reasoned. The optional canary below is a reasoned design.
 
 ## Final proof is the human's
 
@@ -73,10 +87,10 @@ Every command in the loop is run by an agent. Before telling the user anything i
 A linked worktree shares its git directory with the primary checkout, so anything an agent writes there can fire later in the user's own checkout. Save the output of this snapshot to a file before launching the loop and again after it ends, then compare the two files; the only acceptable difference is none (the filter already excludes the loop's own branches, rejected-attempt refs and stash):
 
 ```bash
-snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" 2>/dev/null; }
+snapshot() { g="$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)"; git -C "$REPO" config --local --list | sed -E 's#(://)[^/@]*@#\1***@#'; git -C "$REPO" config --worktree --list 2>/dev/null | sed -E 's#(://)[^/@]*@#\1***@#'; git -C "$REPO" for-each-ref --format='%(refname) %(objectname)' | grep -v -E '^refs/(heads/chaos/|chaos/|stash )'; find "$g/hooks" \( -type f -o -type l \) ! -name '*.sample' -exec shasum -a 256 {} +; shasum -a 256 "$g/info/exclude" "$g/info/attributes" 2>/dev/null; ls -1 "$g/worktrees" 2>/dev/null; }
 ```
 
-REPO is the primary checkout. Hooks, local config, other branches' refs and the ignore file in the git directory are all in the snapshot. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
+REPO is the primary checkout. Hooks, local and worktree config (with credentials in remote URLs masked), other branches' refs, the ignore and attributes files and the list of linked worktrees in the git directory are all in the snapshot. Keep the saved file outside the scratch directory with mode 600. It cannot prove that a sandbox-free agent did nothing else; it catches the changes that would later run code in the user's checkout. If you cannot run it (denied, tool missing), say "unverified" and give the user the exact command and the output to expect.
 
 ## Optional: judge-integrity canary
 
