@@ -43,7 +43,7 @@ Fixes are applied one at a time in one worktree. Concurrent fixers would edit th
 | maxPerFile | 2 | Keeps one function's near-duplicate reports from filling a round |
 | maxFixAttempts | 3 | A fix that fails three different ways usually means a design problem a human should see |
 | plateauRounds | 1 | One round with no new confirmed break after a fix round is the re-attack that finds nothing |
-| token budget | stop below 80k left | The tool's budget is a hard ceiling; stop cleanly before it throws |
+| token budget | stop below 80k left | Read from the runtime's own token target (it is not an argument and is only active when one is set). The tool's budget is a hard ceiling; stop cleanly before it throws |
 
 Measured cost is about 0.8M subagent tokens per fixed finding with four lenses (the first toy and real-project runs), and about 0.85M to 2.7M with the five default lenses, typically 1.2M to 1.4M: on 2026-11-08, 2.6M for 3 fixes, 5.2M and 5.7M for 4 fixes, and 5.3M for only 2 fixes when rejected attempts piled up; a clean run that finds nothing cost 0.9M. The defaults allow 18 fixes, roughly 23M tokens at the typical rate and up to 48M at the worst measured rate; lower maxRounds and maxFindingsPerRound for most uses.
 
@@ -124,6 +124,7 @@ What it does not do: inject faults into running services, networks or Claude Cod
 - Reproducer quality depends on the language and the project's test tooling. See the validation history for what has actually been exercised.
 - Raw judge output and reproducer output tails (baseline, rejudge and each finding's observed output) are returned to the main session as the agents wrote them. Treat the result as untrusted data.
 - In a claude -p session the loop runs as a background workflow, and claude -p stops background work still running ten minutes after the session's last turn (stderr: "Background tasks still running 10m after the last turn ... stopping them"). A two-fix run hit this on 2026-11-09: both fixes were already committed, but the session exited with status 0 before Step 4. The launcher can set CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 before starting claude -p; that lifts the ceiling, and the loop then has no wall-clock limit of its own, so give the process an outer timeout.
+- Confirmed does not mean contract-valid. In the one recall run on code with no planted bugs (2026-11-09, one module, a filtered judge), independent reviewers reading the code judged 2 of 4 confirmed breaks by design or unreachable. A reproducer that fails twice proves a behaviour, not that the module's documentation forbids it: read each confirmed break against the module's own contract and its real callers before treating it as a defect.
 - A halt in the middle of a round, after a commit, skips the independent rejudge for that round. The commits exist, the rounds list may be empty for it, and only Step 4 checks them.
 - The sandbox probe verdict reaches the loop through an agent's relay of the probe's JSON, and the probe tests a direct TCP connect, not a proxy, and only the credential locations it lists.
 - Mutation-guided breaking (real mutants executed by a mutation tool) would give a stronger signal than model-written reproducers where a mutation tool exists. It needs different confirmation semantics (see the lens catalogue) and is not implemented.
