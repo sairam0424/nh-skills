@@ -13,8 +13,8 @@ that flows down from there.
 | Skill artifacts | Markdown + YAML frontmatter | The actual content being versioned — every `SKILL.md` |
 | Validator runtime | Node.js (LTS 20/22+) | Runs `scripts/validate-skills.mjs` |
 | Validator dependency | `js-yaml` | Parses YAML frontmatter for schema checks |
-| Validator test harness | `node:test` (built-in) | Fixture-based self-tests for the validator |
-| CI | GitHub Actions | One job, runs on every PR touching `**/SKILL.md` |
+| Test runner | `node:test` (built-in) | Fixture-based self-tests for the validator, plus the `nh-chaos-monkey` loop harness, sandbox-probe and snapshot tests |
+| CI | GitHub Actions | One validate job (`npm run validate` and `npm test`) on PRs and pushes to `main` that touch a `SKILL.md`, a `scripts/` or `references/` folder, tests, fixtures or the package files, plus a gitleaks secret scan |
 | Packaging/distribution | None (directory layout only) | Third-party installers (`npx skills add`, manual `cp -r`) work off `<skill-name>/SKILL.md` + optional `scripts/`, `references/`, `assets/` — no manifest file needed |
 | License | Apache-2.0 | Decided at the Not-Humans-Lab umbrella level, applied identically across sibling projects |
 
@@ -25,8 +25,8 @@ that flows down from there.
 | Markdown + YAML frontmatter | **Adopt** | No version pin needed — this is a content format, not a dependency |
 | Node.js LTS 20/22+ | **Adopt** | Only needed to *run* the validator locally/in CI — not a runtime dependency of the skills themselves. Skills stay zero-runtime. |
 | js-yaml | **Adopt** | The single devDependency. Chosen because it's the de facto standard, dependency-light YAML parser for Node and matches the "dependency-light" constraint. |
-| node:test | **Adopt** | Built into Node — zero install cost, sufficient for fixture-based validator tests |
-| Jest / Vitest / pytest | **Hold** | Explicitly rejected — no dedicated test framework. The validator script is its own test suite. |
+| node:test | **Adopt** | Built into Node — zero install cost, sufficient for the validator's fixture-based tests and the `nh-chaos-monkey` loop harness |
+| Jest / Vitest / pytest | **Hold** | Explicitly rejected — no dedicated test framework. `node:test` is the whole test suite (validator and `nh-chaos-monkey`). |
 | Bundler (esbuild/webpack/rollup/etc.) | **Hold** | No build step exists or is needed; the validator runs directly as an `.mjs` script |
 | Manifest file (e.g. `skills.json`) | **Hold** | Not needed — directory structure alone (`<skill-name>/SKILL.md`) is sufficient for both `npx skills add` and manual `cp -r` installs |
 | Packaging/distribution tooling | **Hold** | Correct directory layout is the entire distribution mechanism; no additional tooling is in scope |

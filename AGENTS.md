@@ -43,9 +43,9 @@ There is no build step (no compilation, no bundling — the skill artifacts ship
 
 - **Lint/validate all skills**: `npm run validate`
   This is the required command before proposing any skill-related change as done. It runs `scripts/validate-skills.mjs` against every `**/SKILL.md` in the repo.
-- **Run the validator's own self-tests**: `npm test`
-  Fixture-based tests for the validator script itself, using Node's built-in `node:test` (no Jest/Vitest/pytest — see `../Not-Humans-Lab/TESTING.md` for why this project deviates from the workspace's usual test-framework pattern: the validator script is the entire test surface here).
-- **CI**: `validate-skills.yml` runs `npm ci`, `npm audit --audit-level=high`, `npm run validate` and `npm test` on PRs and pushes to `main` that touch skills, the validator, its tests or fixtures, the package files, or the workflow itself. `gitleaks.yml` runs a secret scan on every PR and push to `main`. Dependabot proposes weekly npm and GitHub Actions updates. Every third-party action is pinned to a full commit SHA that was checked against its upstream tag, and workflow token permissions are read-only. CodeQL is deliberately not enabled: this repository is private without code scanning, so it would fail on upload (revisit if the repository becomes public).
+- **Run the tests**: `npm test` (runs `node --test`, which also loads the helper files under `test/support/`)
+  Uses Node's built-in `node:test` (no Jest/Vitest/pytest — see `tech.md` for why this project has no dedicated test framework). It covers the validator (fixture-based self-tests) and `nh-chaos-monkey`: a deterministic harness that runs the real `chaos-loop.js` against scripted fake agents, plus tests for `sandbox-probe.mjs` and the git-state snapshot command. The validator reads only `SKILL.md` files, so a bundled script is guarded by these tests and not by `npm run validate`.
+- **CI**: `validate-skills.yml` runs `npm ci`, `npm audit --audit-level=high`, `npm run validate` and `npm test` on PRs and pushes to `main` that touch a `SKILL.md`, a skill's `scripts/` or `references/` folder, the validator, its tests or fixtures, the package files, or the workflow itself. `gitleaks.yml` runs a secret scan on every PR and push to `main`. Dependabot proposes weekly npm and GitHub Actions updates. Every third-party action is pinned to a full commit SHA that was checked against its upstream tag, and workflow token permissions are read-only. CodeQL is deliberately not enabled: this repository is private without code scanning, so it would fail on upload (revisit if the repository becomes public).
 
 ## Code Style
 
@@ -68,9 +68,12 @@ nh-skills/
     valid-skill/SKILL.md      — validator fixture, must pass with zero hard-fails
     invalid-skill/SKILL.md     — validator fixture, must fail with >=1 hard-fail
   test/
-    validate-skills.test.mjs   — fixture-based self-tests (node:test)
+    validate-skills*.test.mjs  — fixture-based validator self-tests (node:test)
+    chaos-loop-*.test.mjs      — the real nh-chaos-monkey loop run against scripted fake agents
+    sandbox-probe.test.mjs, snapshot-command.test.mjs — the probe and the git-state snapshot command
+    support/                   — harness helpers (chaos-loop-harness.mjs, git-env.mjs)
   .github/workflows/
-    validate-skills.yml       — CI job, triggers on **/SKILL.md, **/scripts/**, **/references/**, test and fixture changes
+    validate-skills.yml       — CI job, triggers on **/SKILL.md, **/scripts/**, **/references/**, scripts/**, test, fixture, package-file and workflow changes
   <skill-name>/
     SKILL.md                   — one per skill
     scripts/ references/ assets/ (optional, per skill)
@@ -82,7 +85,7 @@ Same template as every sibling project in this suite — see this repo's own `Br
 
 - Branch naming: `type/scope-slug` (e.g. `feat/skills-nh-chaos-monkey`, `fix/skills-frontmatter-validation`).
 - Commits: [Conventional Commits](https://www.conventionalcommits.org) — required, drives changelog/versioning.
-- Every skill addition/edit goes through a PR, even solo. CI (`npm run validate`) must pass before merge.
+- Every skill addition/edit goes through a PR, even solo. CI (validator, tests, dependency audit and secret scan) must pass before merge.
 - Squash-merge only; the squash commit message must itself be a valid Conventional Commit.
 
 ## Security Notes

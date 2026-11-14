@@ -3,7 +3,7 @@
 > Living snapshot. Update this file whenever phase, health, or active work
 > changes — do not let it go stale across a phase boundary.
 
-**Last updated:** 2026-09-02
+**Last updated:** 2026-11-14
 
 ## Overall Status
 
@@ -23,8 +23,8 @@ shipped their own Phases 3-6 — see their own repos for their state.
 Tech stack is intentionally minimal: pure Markdown + YAML frontmatter for
 every skill artifact (zero runtime, per the Agent Skills format), plus
 exactly one lint layer — `scripts/validate-skills.mjs` (one devDependency,
-`js-yaml`) — run as a GitHub Actions job on every PR touching
-`**/SKILL.md`. See `docs/adr/0001-adopt-markdown-only-skill-format-with-lint-gate.md`
+`js-yaml`) — run, together with `npm test`, as a GitHub Actions job on every PR
+or push to `main` that touches a `SKILL.md`, a `scripts/` or `references/` folder, the tests, the fixtures or the package files. See `docs/adr/0001-adopt-markdown-only-skill-format-with-lint-gate.md`
 for the full rationale.
 
 ## Active Specs & Plans
@@ -34,11 +34,24 @@ for the full rationale.
 | Pre-scaffold docs (SECURITY.md, SUPPORT.md, status.md, decisions.md) | 1     | Complete    |
 | Walking skeleton: author `nh-commit` through full author→merge loop | 2     | **Complete — merged via PR #1 (skill removed 2026-11-02)** |
 | `scripts/validate-skills.mjs` (frontmatter + structural lint)        | 2     | Complete, CI-verified |
-| GitHub Actions lint job on `**/SKILL.md` PRs                          | 2     | Complete, green |
+| GitHub Actions job: validator and `npm test` on PRs and pushes to `main` touching a `SKILL.md`, scripts, references, tests, fixtures or package files | 2     | Complete, green |
+| `nh-chaos-monkey` rename, test harness, fault lens, sandbox probe and gate (PRs #13, #16 to #22) | 2     | Complete, merged |
 | SHA-256 integrity manifest scheme (per `SECURITY.md`)                 | 3+    | Planned, not started |
 
 ## Recent Progress
 
+- 2026-11-14: refreshed `Context.md`, this file, `codebase_map.md`, `AGENTS.md`,
+  `tech.md` and `architecture.md` to match the work below (they still described
+  the validator as the only test surface and CI as running on `SKILL.md`
+  changes alone).
+- 2026-11-09 to 2026-11-12: PRs #16 to #22 merged. `nh-chaos-monkey` gained a
+  deterministic test harness (the real `chaos-loop.js` run against scripted fake
+  agents), a fault-injection lens, a sandbox probe and gate, a tested git-state
+  snapshot command and a `learning.md` journal (#14 and #15 were closed in
+  favour of #16). `npm test` reports 264 passing results across 21 test files
+  and 2 helper files. The live runs of 2026-11-08 are in
+  `nh-chaos-monkey/references/loop-design.md`; the later live runs and the
+  end-to-end verification are in `nh-chaos-monkey/learning.md`.
 - 2026-11-08: renamed the only skill `nh-breaker` to `nh-chaos-monkey`; the entries
   below use the old name.
 - 2026-11-02: started the collection fresh. `nh-commit` and `nh-style-markdown`
@@ -74,3 +87,6 @@ for the full rationale.
   published externally before that scheme exists, there is no cryptographic
   provenance for it beyond git history. Acceptable today (one skill, low
   external exposure), but revisit before this repo is advertised publicly.
+- **Risk:** squash-merge-only is a convention, not a setting — the repository
+  also allows merge commits and rebase merges, and PR #22 landed as a merge
+  commit (see `Context.md`, Open risks).

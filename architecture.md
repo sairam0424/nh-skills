@@ -51,7 +51,8 @@ Not-Humans-Lab).
   `npx skills add` installer, or doing a manual `cp -r <skill-name>/
   ~/.claude/skills/`. Both resolve purely from this repo's directory layout.
 - **In scope for nh-skills itself**: authoring and validating skill content;
-  the CI gate that enforces validator rules on every PR.
+  the CI gate that enforces validator rules on PRs and pushes to main that
+  touch a SKILL.md, scripts, references, tests, fixtures or the package files.
 - **Out of scope for nh-skills itself**: packaging/distribution tooling
   beyond correct directory layout, a manifest file, a dedicated test
   framework, and anything belonging to nh-deck or daily-dose.
@@ -79,9 +80,11 @@ nh-skills/
 │
 └── .github/workflows/
     └── validate-skills.yml    Building block 4: CI gate
-                                    — runs the validator as one GitHub
-                                      Actions job on every PR touching
-                                      **/SKILL.md.
+                                    — runs the validator and the tests as
+                                      one GitHub Actions job on every PR
+                                      or push to main touching a SKILL.md,
+                                      scripts, references, tests or
+                                      fixtures.
 ```
 
 Relationships:
@@ -117,7 +120,7 @@ merge:
               ▼
  4. CI re-runs the validator
     (.github/workflows/validate-skills.yml,
-     triggered on PRs touching **/SKILL.md)
+     triggered on PRs touching a SKILL.md, scripts, references, tests or fixtures)
               │
         fail ─┼─ pass
         │            │
