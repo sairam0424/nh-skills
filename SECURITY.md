@@ -11,14 +11,17 @@ ahead of the sections GitHub's template puts first.
 
 ## Supported Versions
 
-nh-skills does not follow semver release branches. There is one living
-line of development: the `main` branch. The latest commit on `main` is the
-only supported version. There are no LTS branches and no backport policy.
+nh-skills has one living line of development: the `main` branch. Releases
+are tags of the form `vMAJOR.MINOR.PATCH` cut from `main`. Only the latest
+release and `main` receive fixes. There are no LTS branches and no backport
+policy. While the version starts with `0.`, a fix may change a skill's
+arguments or behaviour, and the release notes say so.
 
 | Version              | Supported          |
 | --------------------- | ------------------- |
+| Latest release (`v0.1.x`) | Yes             |
 | `main` (latest commit) | Yes                 |
-| Anything older / forked | No — pull latest `main` |
+| Older releases / forks | No — upgrade to the latest release |
 
 ## Supply Chain & Dependency Policy (Primary)
 
@@ -26,63 +29,69 @@ This is the section that matters most for a skills repo, because the thing
 being distributed is instructions an agent will execute, plus any bundled
 scripts it may run.
 
-### Integrity manifests (planned, not yet shipped)
+### Integrity manifests (under consideration, not shipped)
 
-**Status: planned for a future phase. Not implemented in Phase 2 (walking
-skeleton).** The intended design:
+**Status: not implemented in 0.1.x, and not committed to.** The project's
+other documents defer any manifest until the catalogue reaches roughly 30 to
+40 skills or outside contributors appear. Until then, each release attaches
+an archive of the skill folder together with its SHA-256, so you can check
+what you downloaded. The design under consideration:
 
-- Every published skill directory (`<skill-name>/`) will get a
+- Every published skill directory (`<skill-name>/`) would get a
   content-addressed **SHA-256 integrity manifest** covering `SKILL.md` and
   every file under `scripts/`, `references/`, and `assets/` for that skill.
-- The manifest will be generated at publish time (not authored by hand) and
+- The manifest would be generated at publish time (not authored by hand) and
   committed alongside the skill it describes.
 - A consumer of a skill (a human running `cp -r` into `~/.claude/skills/`,
-  or a tool like `npx skills add`) will be able to re-hash the files they
-  received and diff against the manifest to detect tampering introduced
-  after publish — in transit, by a mirror, or by a compromised fork.
-- The validator (`scripts/validate-skills.mjs`) is expected to grow a
+  or a tool like `npx skills add`) could re-hash the files they received and
+  diff against the manifest to detect tampering introduced after publish —
+  in transit, by a mirror, or by a compromised fork.
+- The validator (`scripts/validate-skills.mjs`) could grow a
   `--verify-manifest` mode once manifests exist, so drift is caught in CI,
   not just by end users.
 
-Until this ships, integrity is enforced only by normal git history (commit
-signatures are **not** currently required — see Known Security
-Considerations) and by the structural/schema checks the validator already
-performs on every PR touching `**/SKILL.md`.
+Until this ships, integrity rests on normal git history (commit signatures
+are **not** currently required — see Known Security Considerations), on the
+SHA-256 published with each release, and on the structural/schema checks the
+validator performs on every PR that touches a `SKILL.md`.
 
-### Provenance chain (planned)
+### Provenance chain (under consideration)
 
 nh-skills is expected to grow promotion stages as it matures (author →
-reviewed → published, roughly mirroring how the sibling
-`Not-Humans-Lab` projects think about staged rollout — see
-`../Not-Humans-Lab/` for cross-cutting system docs). The planned provenance
-concept:
+reviewed → published, roughly mirroring staged rollout in the author's other
+projects). The provenance concept under consideration:
 
-- Each skill's manifest will record which commit/PR promoted it through
+- Each skill's manifest would record which commit/PR promoted it through
   each stage, so "what changed between the version I copied six months ago
   and the version on `main` today" is answerable from git history plus the
   manifest, not from memory.
 - A skill that has never passed the lint gate in `scripts/validate-skills.mjs`
-  cannot be considered "published" — the GitHub Actions job on every PR
-  touching `**/SKILL.md` is the enforcement point today, and will remain the
-  gate once manifests exist.
+  cannot be considered "published". The GitHub Actions job that runs it on a
+  PR touching a `SKILL.md` is the check today. It is path-filtered, and
+  squash-only merging is a convention that repository settings do not
+  enforce, so this is a review aid, not a hard gate.
 - No skill in this repo currently claims a formal provenance stage beyond
-  "merged to `main`." Treat everything here as unaudited beyond the
-  automated lint checks until this section is updated to say otherwise.
+  "merged to `main`" and "released." Treat everything here as unaudited
+  beyond the validator, the test suite, and the independent AI reviews
+  recorded in `nh-chaos-monkey/references/loop-design.md` and
+  `nh-chaos-monkey/learning.md`. None of those is a human audit.
 
 ### Dependency pinning
 
-- The repository has exactly one intentional runtime dependency:
-  `js-yaml`, used by `scripts/validate-skills.mjs`. It is a devDependency,
-  not shipped as part of any skill artifact.
-- Skill artifacts themselves (`SKILL.md` + optional `scripts/`,
-  `references/`, `assets/`) are pure Markdown/YAML/static assets with **zero
-  runtime dependencies** by design — this is the entire point of the Agent
-  Skills format and the property this repo exists to preserve.
+- The repository declares exactly one dependency: `js-yaml`, a devDependency
+  used only by `scripts/validate-skills.mjs` (its lockfile also carries
+  `js-yaml`'s own dependency). It is not shipped as part of
+  any skill artifact.
+- Skills themselves (`SKILL.md` + optional `scripts/`, `references/`,
+  `assets/`) carry no package dependencies by design. A skill may still need
+  tools on your machine: `nh-chaos-monkey` bundles two scripts,
+  `chaos-loop.js` (it runs inside Claude Code's Workflow tool) and
+  `sandbox-probe.mjs` (plain Node, built-in modules only), and needs Node,
+  git and Claude Code itself. Dependency-free is the property this repo
+  tries to preserve.
 - If a skill's own `scripts/` directory ever needs a dependency, it must be
-  declared explicitly inside that skill's own scope, reviewed for necessity
-  (see `../Not-Humans-Lab/` for the workspace's general dependency-hygiene
-  posture), and never installed globally as a side effect of adding the
-  skill.
+  declared explicitly inside that skill's own scope, reviewed for necessity,
+  and never installed globally as a side effect of adding the skill.
 - Dependabot (or equivalent) alerts against `package.json` are triaged like
   any other repo, but a dependency alert against the validator tooling is
   lower severity than a compromised skill body, because the validator never
@@ -96,17 +105,21 @@ tampered, or unsafe to run:
 1. **Contain**: the skill's directory is reverted or removed from `main` in
    a dedicated commit — no other changes bundled in — so the takedown is
    trivially auditable.
-2. **Notify**: anyone who starred, forked, or is known to have installed
-   the skill (via an issue, discussion, or direct report) is notified with
-   a plain description of what was wrong and what changed. If the skill was
-   ever tagged as "published" under the future provenance scheme, that
-   status is revoked in the same commit.
+2. **Notify**: publish a security advisory and a note on the affected
+   release with a plain description of what was wrong and what changed, and
+   tell the reporter and anyone known to have installed the skill (via an
+   issue, discussion, or direct report) directly. GitHub offers no way to
+   notify stargazers or forks, so the advisory and release notes are the
+   public record. If the skill was ever tagged as "published" under the
+   future provenance scheme, that status is revoked in the same commit.
 3. **Root cause**: a short postmortem note is added to `status.md` or
    `decisions.md` (whichever is live at the time) recording what happened
    and what check — existing or new — should have caught it.
 4. **Re-entry bar**: a takedown skill can only return to `main` after it
-   passes the full validator gate again *and* an explicit second human
-   review, even if the original defect is fixed.
+   passes the full validator gate again *and* an independent review of the
+   fix, even if the original defect is fixed. This is a single-maintainer
+   project, so that reviewer may be an outside person or an AI reviewer, not
+   a second maintainer.
 
 There is no automated kill-switch for already-copied skills (this is a
 Markdown-file distribution model, not a package registry with a revoke
@@ -179,7 +192,8 @@ reporter asks to remain anonymous.
 - Any `SKILL.md` in this repository and its bundled `scripts/`,
   `references/`, or `assets/`.
 - `scripts/validate-skills.mjs` and its fixture-based self-tests.
-- The GitHub Actions lint workflow that gates PRs touching `**/SKILL.md`.
+- The GitHub Actions workflows in `.github/` (the validate and secret-scan
+  jobs).
 - Repository metadata that affects trust (LICENSE, this file, `SUPPORT.md`,
   `decisions.md`).
 
@@ -188,10 +202,14 @@ reporter asks to remain anonymous.
 - The third-party installer tooling (`npx skills add`) and its own
   security posture — report issues with it upstream, not here.
 - Claude Code / the Agent Skills runtime itself — report to Anthropic.
-- The sibling planned projects `nh-deck` and `daily-dose` — they do not
-  exist yet and have no code to audit.
-- `../Not-Humans-Lab/` — a separate, docs-only meta-repo; report issues
-  with its content there, not here.
+- The author's other projects (`nh-deck`, `daily-dose` and others) — they
+  are separate repositories; report issues there.
+- Damage caused by running a skill on code you do not own, or without the
+  sandbox its documentation asks for. `nh-chaos-monkey` executes project
+  code by design; a hostile repository reaching your machine because you
+  ran it unsandboxed is a documented risk, not a vulnerability in this
+  repository. A way to bypass the controls it does claim (the worktree and
+  branch checks, the protected-file hashes, the probe) is in scope.
 
 ## Known Security Considerations
 
@@ -200,10 +218,12 @@ reporter asks to remain anonymous.
   single-maintainer personal project today, but is called out here as a
   known gap rather than left implicit.
 - **No sandboxing of bundled scripts.** A skill's `scripts/` files are
-  plain files reviewed by eye during PR review; there is no automated
-  sandbox execution or static analysis of arbitrary script behavior beyond
-  what the CI lint job checks (which only validates `SKILL.md` frontmatter
-  and structure, not the semantics of bundled scripts).
+  reviewed by eye and by AI reviewers during PR review. The repository's
+  tests (`npm test`) exercise `nh-chaos-monkey`'s loop script and sandbox
+  probe, but nothing sandboxes them when you run the skill, and the CI lint
+  job only validates `SKILL.md` frontmatter and structure, not the semantics
+  of bundled scripts. Run `nh-chaos-monkey` inside the sandbox described in
+  the root `README.md` and in `nh-chaos-monkey/references/safety-runner.md`.
 - **Distribution is copy-based, not registry-based.** There is no revoke
   API once someone has `cp -r`'d a skill onto their machine — see the
   Takedown section above.

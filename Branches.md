@@ -2,6 +2,8 @@
 
 This is the source-of-truth branch/release strategy. Copy it **verbatim** into each of daily-dose/nh-deck/nh-skills once scaffolded (each is its own independent git repo — no symlink option). Any per-project deviation must be called out inline in that project's own copy, not left to silently drift.
 
+> **Deviations in nh-skills (as of v0.1.0).** nh-skills is not published to npm (`package.json` is `private`), so a merge to `main` publishes nothing and no changelog is generated. Releases are cut by hand as GitHub Releases from a `vMAJOR.MINOR.PATCH` tag, each with hand-written notes. Squash-only merging and a protected `main` are the goal; whether repository settings enforce them is recorded in `Context.md`.
+
 ## Branching Model
 
 Trunk-based / GitHub Flow: `main` is always releasable. All work happens on short-lived branches off `main`. No `develop`/`release/*` hierarchy — a solo maintainer with AI-agent assistance doesn't need one.

@@ -44,14 +44,14 @@ artifacts themselves.
   layout. The `name` field in frontmatter must match its containing
   folder name, or installation breaks silently for consumers — this needs
   to be a hard-fail check, not a convention we hope people follow.
-  (User rule: "Validate input at system boundaries" — the boundary here is
+  (Author's rule: "Validate input at system boundaries" — the boundary here is
   the frontmatter/folder-name contract.)
-- **Minimize dependency surface.** Per the user's global coding-style and
+- **Minimize dependency surface.** Per the author's coding-style and
   security rules (DRY, KISS, no unnecessary dependencies), the validator
   should carry the fewest possible dependencies, and definitely should not
   require anything beyond Node.js (already a workspace-wide baseline
   tool) to run.
-- **No dedicated test framework overhead.** Per the user's testing rules
+- **No dedicated test framework overhead.** Per the author's testing rules
   (test-first discipline, but also YAGNI), a fixture-based self-test suite
   for a single ~200-400 line validator script does not need Jest, Vitest,
   or pytest — Node's built-in `node:test` is sufficient and adds zero

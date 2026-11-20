@@ -36,7 +36,7 @@ for the full rationale.
 | `scripts/validate-skills.mjs` (frontmatter + structural lint)        | 2     | Complete, CI-verified |
 | GitHub Actions job: validator and `npm test` on PRs and pushes to `main` touching a `SKILL.md`, scripts, references, tests, fixtures or package files | 2     | Complete, green |
 | `nh-chaos-monkey` rename, test harness, fault lens, sandbox probe and gate (PRs #13, #16 to #22) | 2     | Complete, merged |
-| SHA-256 integrity manifest scheme (per `SECURITY.md`)                 | 3+    | Planned, not started |
+| SHA-256 integrity manifest scheme (per `SECURITY.md`)                 | 3+    | Deferred; each release publishes an archive SHA-256 instead |
 
 ## Recent Progress
 
@@ -85,8 +85,9 @@ for the full rationale.
 - **Risk:** the SHA-256 integrity-manifest scheme in `SECURITY.md` is
   documented as *planned* but has zero implementation yet — if a skill is
   published externally before that scheme exists, there is no cryptographic
-  provenance for it beyond git history. Acceptable today (one skill, low
-  external exposure), but revisit before this repo is advertised publicly.
+  provenance for it beyond git history. Each release now attaches a SHA-256
+  of its archive, which covers integrity at download time; the manifest
+  scheme itself stays deferred (see `SECURITY.md`).
 - **Risk:** squash-merge-only is a convention, not a setting — the repository
   also allows merge commits and rebase merges, and PR #22 landed as a merge
   commit (see `Context.md`, Open risks).
