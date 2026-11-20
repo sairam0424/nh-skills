@@ -53,13 +53,13 @@ cp -r nh-skills/nh-chaos-monkey ~/.claude/skills/
 ls ~/.claude/skills/nh-chaos-monkey/SKILL.md               # must exist, one level below skills/
 ```
 
-**With the community [`skills`](https://www.npmjs.com/package/skills) CLI**, a third-party tool that needs Node.js 22.20 or newer (read its documentation first). The repository also contains two test fixtures with a `SKILL.md`, so name the skill:
+**With the community [`skills`](https://www.npmjs.com/package/skills) CLI**, a third-party tool that needs Node.js 22.20 or newer (read its documentation first). It found and installed this skill from the public repository in a clean test project (skills 1.9.0):
 
 ```bash
 npx skills add sairam0424/nh-skills --skill nh-chaos-monkey -a claude-code
 ```
 
-This installs into the current project. Add `-g` to make the skill available in every project.
+This installs into the current project (add `-y` to skip its prompts, or `-g` to make the skill available in every project).
 
 Each [release](https://github.com/sairam0424/nh-skills/releases) attaches an archive of the skill folder and its SHA-256, so you can check what you downloaded. Then start Claude Code and run `/nh-chaos-monkey`.
 
