@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "A personal, curated collection of Claude Code Agent Skills (SKILL.md files).",
   "license": "Apache-2.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-skills.mjs",

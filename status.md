@@ -85,8 +85,9 @@ for the full rationale.
 - **Risk:** the SHA-256 integrity-manifest scheme in `SECURITY.md` is
   documented as *planned* but has zero implementation yet — if a skill is
   published externally before that scheme exists, there is no cryptographic
-  provenance for it beyond git history. Acceptable today (one skill, low
-  external exposure), but revisit before this repo is advertised publicly.
+  provenance for it beyond git history. Each release now attaches a SHA-256
+  of its archive, which covers integrity at download time; the manifest
+  scheme itself stays deferred (see `SECURITY.md`).
 - **Risk:** squash-merge-only is a convention, not a setting — the repository
   also allows merge commits and rebase merges, and PR #22 landed as a merge
   commit (see `Context.md`, Open risks).

@@ -18,6 +18,9 @@ pids/
 coverage/
 .nyc_output/
 
+# Maintainer working notes and daily logs (never published)
+scratch-pad/
+
 # Environment variables
 .env
 .env.local

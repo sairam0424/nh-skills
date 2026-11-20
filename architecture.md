@@ -27,9 +27,9 @@ Not-Humans-Lab).
                                     ▼
    ┌───────────────┐      ┌─────────────────────┐      ┌───────────────┐
    │  nh-deck       │◄────►│      nh-skills       │◄────►│  daily-dose    │
-   │  (planned      │      │  THIS repo:          │      │  (planned      │
-   │  sibling,      │      │  curated Claude Code  │      │  sibling,      │
-   │  not yet built)│      │  Agent Skills +       │      │  not yet built)│
+   │  (sibling      │      │  THIS repo:          │      │  (sibling      │
+   │  project,      │      │  curated Claude Code  │      │  project,      │
+   │  own repo)     │      │  Agent Skills +       │      │  own repo)     │
    └───────────────┘      │  frontmatter validator │      └───────────────┘
                           └──────────┬────────────┘
                                      │
@@ -44,9 +44,9 @@ Not-Humans-Lab).
 - **Not-Humans-Lab** (external actor): a docs-only meta-repo holding
   cross-cutting, system-level docs shared by the three sibling projects. It
   is read from (relative links), never duplicated into this repo.
-- **nh-deck, daily-dose** (external actors, planned): sibling projects under
-  the same umbrella. They do not exist yet at this point in the plan and are
-  referenced here only as future peers with no current integration.
+- **nh-deck, daily-dose** (external actors): sibling projects under the same
+  umbrella, each in its own repository. They have no integration with this
+  repo; the relationship is thematic only.
 - **External consumers** (external actor): anyone running the third-party
   `npx skills add` installer, or doing a manual `cp -r <skill-name>/
   ~/.claude/skills/`. Both resolve purely from this repo's directory layout.

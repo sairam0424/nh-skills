@@ -25,16 +25,15 @@ that.
 
 ## Links to Docs
 
+- Install, quick start, safety and cost of `nh-chaos-monkey`: `README.md`
+  (repo root) and `nh-chaos-monkey/SKILL.md`
 - Project overview and current state: `status.md` (this repo, root)
 - Architecture and process decisions: `decisions.md` and `docs/adr/`
   (this repo, root)
-- Cross-cutting, system-level docs shared across the sibling projects
-  (`daily-dose`, `nh-deck`, `nh-skills`): `../Not-Humans-Lab/` — link by
-  relative path; content there is not duplicated here.
-- Skill authoring conventions and the validator's rules: read
-  `scripts/validate-skills.mjs` directly, and any `README.md` at the repo
-  root once one exists — the validator's hard-fail/soft-warn checks are the
-  authoritative spec for what a valid `SKILL.md` looks like.
+- Skill authoring conventions and the validator's rules: `README.md`
+  (Contributing) and `scripts/validate-skills.mjs` — the validator's
+  hard-fail/soft-warn checks are the authoritative spec for what a valid
+  `SKILL.md` looks like.
 
 ## Community Channels
 
@@ -69,9 +68,9 @@ saves a round trip.
 - As a rough, non-binding guide: issues are typically triaged (labeled,
   acknowledged) within a couple of weeks, faster if the report is clear and
   actionable.
-- Security reports follow the timeline in `SECURITY.md`, which is tighter
-  than general support because of the private-disclosure process — use
-  that channel, not a public issue, for anything security-related.
+- Security reports follow the timeline in `SECURITY.md` (acknowledgement
+  within 5 business days) — use that channel, not a public issue, for
+  anything security-related.
 - Pull requests fixing an obvious bug with a clear description are
   generally reviewed faster than open-ended feature requests.
 
