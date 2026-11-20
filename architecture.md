@@ -26,7 +26,7 @@ Not-Humans-Lab).
                                     │  no build/runtime dependency)
                                     ▼
    ┌───────────────┐      ┌─────────────────────┐      ┌───────────────┐
-   │  nh-deck       │◄────►│      nh-skills       │◄────►│  daily-dose    │
+   │  nh-deck       │ · · · │      nh-skills       │ · · · │  daily-dose    │
    │  (sibling      │      │  THIS repo:          │      │  (sibling      │
    │  project,      │      │  curated Claude Code  │      │  project,      │
    │  own repo)     │      │  Agent Skills +       │      │  own repo)     │
@@ -51,7 +51,7 @@ Not-Humans-Lab).
   `npx skills add` installer, or doing a manual `cp -r <skill-name>/
   ~/.claude/skills/`. Both resolve purely from this repo's directory layout.
 - **In scope for nh-skills itself**: authoring and validating skill content;
-  the CI gate that enforces validator rules on PRs and pushes to main that
+  the CI check that runs the validator rules on PRs and pushes to main that
   touch a SKILL.md, scripts, references, tests, fixtures or the package files.
 - **Out of scope for nh-skills itself**: packaging/distribution tooling
   beyond correct directory layout, a manifest file, a dedicated test

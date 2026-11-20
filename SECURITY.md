@@ -55,13 +55,13 @@ are **not** currently required — see Known Security Considerations), on the
 SHA-256 published with each release, and on the structural/schema checks the
 validator performs on every PR that touches a `SKILL.md`.
 
-### Provenance chain (planned)
+### Provenance chain (under consideration)
 
 nh-skills is expected to grow promotion stages as it matures (author →
 reviewed → published, roughly mirroring staged rollout in the author's other
-projects). The planned provenance concept:
+projects). The provenance concept under consideration:
 
-- Each skill's manifest will record which commit/PR promoted it through
+- Each skill's manifest would record which commit/PR promoted it through
   each stage, so "what changed between the version I copied six months ago
   and the version on `main` today" is answerable from git history plus the
   manifest, not from memory.
@@ -78,8 +78,9 @@ projects). The planned provenance concept:
 
 ### Dependency pinning
 
-- The repository has exactly one dependency: `js-yaml`, a devDependency
-  used only by `scripts/validate-skills.mjs`. It is not shipped as part of
+- The repository declares exactly one dependency: `js-yaml`, a devDependency
+  used only by `scripts/validate-skills.mjs` (its lockfile also carries
+  `js-yaml`'s own dependency). It is not shipped as part of
   any skill artifact.
 - Skills themselves (`SKILL.md` + optional `scripts/`, `references/`,
   `assets/`) carry no package dependencies by design. A skill may still need

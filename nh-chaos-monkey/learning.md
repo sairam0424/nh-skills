@@ -2,8 +2,7 @@
 
 Append-only record of A/B trials run by skill-ab-improver against this skill's
 instructions. Every entry — adopted, rejected, or tied — stays; this is a history of what
-was tried, not just what won. For the first public release, dollar figures, account-specific
-model notices and details of the author's local tooling were removed from the entries below;
+was tried, not just what won. For the first public release, dollar figures were removed from the entries below;
 token counts and times are kept.
 
 ## 2026-11-09 — Step 4: prove each regression test on the tree just before its own fix
@@ -99,7 +98,7 @@ This is not an A/B: no candidate was tried. It asks what the skill finds on real
 **Scoring basis:** Each reproducer was read and then run twice by me from the loop worktree. Five fresh read-only reviewers then judged, by reading the code and grepping for callers (nothing executed), whether each confirmed break is a real defect against the module's contract as far as they could infer it from its comments, tests and callers, and reachable from real callers, and triaged the unconfirmed leads from code alone.
 
 **Results:**
-- Run: 34 minutes, exit 0, no ceiling kill (CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0), By the session's own report: 16 agents, about 2.41M subagent tokens, 2 rounds, all five lenses answered both rounds. 4 breaks confirmed (class confirmed-unfixed), 10 candidates left in the backlog (8 distinct leads: two of them were each reported twice), nothing fixed. Verified by me: the clone and the loop worktree are clean, HEAD equals BASE with no commits, the shared git state snapshots are identical, the author's real repository shows no changes, and all four reproducers exited 1 in both of my runs.
+- Run: 34 minutes, exit 0, no ceiling kill (CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0). By the session's own report: 16 agents, about 2.41M subagent tokens, 2 rounds, all five lenses answered both rounds. 4 breaks confirmed (class confirmed-unfixed), 10 candidates left in the backlog (8 distinct leads: two of them were each reported twice), nothing fixed. Verified by me: the clone and the loop worktree are clean, HEAD equals BASE with no commits, the shared git state snapshots are identical, the author's real repository shows no changes, and all four reproducers exited 1 in both of my runs.
 - Confirmed breaks, judged by the reviewers: 2 of 4 are real defects. A fresh worktree is dirty when node_modules is symlinked and the repository ignores it with a trailing slash, so rebaseOntoBase refuses (medium; reachable only through the exported API, with no in-repo caller). A path such as app/[id]/page.tsx is treated as a glob by git, so another file's edit gets staged (low, reachability unknown). The other 2 were judged by design or unreachable: a race inside git's own worktree add across 32 simultaneous processes, and remove() falling back to deleting the directory after git refuses (deliberate; a locked worktree is a narrow hardening gap and the main-tree case is misuse).
 - Unconfirmed leads, triaged from code only: 7 of 8 look real (2 medium, 5 low) and 1 is misuse-only.
 - Reviewers: 0.82M subagent tokens. Findings and reproducers are saved in the author's private notes.
@@ -130,3 +129,22 @@ This is not an A/B: no candidate was tried. It observes the shipped skill at its
 **Decision:** CONFIRMED. No documented guarantee was broken at any surface exercised. Two documentation gaps were found and are corrected in the same change as this entry: the target is a positional argument and there is no --target flag, and a --token-budget passed anyway must be reported as ignored without narrowing the run. A third observation is left unchanged on purpose: the red-judge session ran the judge before creating any worktree, which the skill does not ask for. That ran project code before the sandbox probe could pass, and with no scratch directory yet it left its export in the system temp folder; the documented order (worktree, scratch directory, then the judge) stays as it is.
 
 **Reasoning:** One fixture per mode, one model family (all four sessions' stderr carried a model-fallback warning, but every model id in the init events and the usage records, and for the 17 loop agents of the fixing run, is claude-sonnet-5-5), and a machine under heavy load (a load average of 56 in an uptime reading during the runs, not saved), so this shows the shipped behaviour on small fixtures, not a rate. Not exercised: the injection canary on this version, Python or Go targets, the Linux sandbox and srt, adaptive injection payloads, and the npm ci install path (not exercised here; the earlier recall run's session ran it in its worktree, but that transcript is deleted and the entry for it does not record the command).
+
+## 2026-11-13 — Post-merge probes of the installed skill (main b6e5f9a): the three documentation fixes at the agent surface
+
+This is not an A/B: no candidate was tried. It checks that the wording merged after the 2026-11-12 verification works in fresh sessions.
+
+**Test task:** Two headless claude -p sessions of the installed skill (identical to the repository folder, 9 of 9 files; background ceiling lifted; an outer cost cap on each), each on a small throwaway fixture. (a) No --judge given. (b) A valid lead-only run (1 round, 1 finding) with a stray --token-budget 100000 passed.
+
+**Candidate change:** None.
+
+**Scoring basis:** Expected outcomes: (a) stops before creating anything and prints a command with no --target flag and without the consent flags; (b) reports the budget flag as ignored, keeps the five default lenses and the caps, and still finds the planted bug. For (b) the repository state, the worktree and the reproducer were re-checked by hand.
+
+**Results:**
+- (a) 7 turns, 6 tool calls (4 reads, 2 shell commands), no workflow launched. It stopped before Step 2 and created nothing (one worktree, branch main only). The command it printed had no --target flag, and it left --accept-no-sandbox off with the reason that accepting the risk is the user's call. One sentence in its prose, "There is no --accept-no-sandbox flag", meant "not in this invocation" and reads ambiguously; left unchanged.
+- (b) 15 turns, one workflow launch. The arguments it passed were the target, workdir, scratch, judge command, testCountHint, fixEnabled false, maxRounds 1 and maxFindingsPerRound 1, with no lens list, so the five default lenses ran and all five answered. It wrote that the --token-budget flag was ignored because the loop has no such argument, and that it did not reduce lenses or caps because of it. It found the real chunk() bug (confirmed-unfixed, lead-only). By the session's own report: 8 agents and about 0.92M subagent tokens.
+- Checked by me: the primary checkout clean at the fixture's HEAD; the loop worktree on its chaos/ branch with a clean tree and no commits; the 32-line reproducer exits 1 on both of my runs and leaves the worktree clean; the shared git state snapshots differ only by the new worktree listing line, as expected.
+
+**Decision:** CONFIRMED. The target-argument, consent-flag and --token-budget wording works in a fresh session. The merged text is unchanged.
+
+**Reasoning:** One session per mode on small fixtures, so this shows the wording is followed, not how often. Not exercised: a fixing run on this version, Python or Go, the Linux sandbox, adaptive injection, and the dependency-install step.
