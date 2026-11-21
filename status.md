@@ -40,6 +40,7 @@ for the full rationale.
 
 ## Recent Progress
 
+- 2026-11-21: v0.1.0 released and the repository made public. Release assets are an archive of `nh-chaos-monkey/` and its SHA-256. The install routes in the README were checked from the public URL: a clone pinned to the tag, the release archive's checksum, and the `skills` CLI in a throwaway project. Settings now: squash-only merges, a ruleset on `main` (pull request and `gitleaks` check required, no force-push or deletion), secret scanning with push protection, Dependabot alerts, CodeQL, and private vulnerability reporting. Open items from the pre-release review are tracked in issue #25.
 - 2026-11-14: refreshed `Context.md`, this file, `codebase_map.md`, `AGENTS.md`,
   `tech.md` and `architecture.md` to match the work below (they still described
   the validator as the only test surface and CI as running on `SKILL.md`
