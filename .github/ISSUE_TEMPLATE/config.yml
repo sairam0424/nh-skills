@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/sairam0424/nh-skills/security/advisories/new
+    about: A tampered skill, a way around the sandbox probe or protected-file checks, or a prompt-injection path. Do not open a public issue.
+  - name: Read the README first
+    url: https://github.com/sairam0424/nh-skills#readme
+    about: Install, quick start, requirements, cost and what has and has not been tested.

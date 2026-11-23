@@ -1,0 +1,77 @@
+name: Bug report or unclear docs
+description: Something in nh-chaos-monkey, the validator or the documentation did not work or was wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please redact secrets, tokens and private code from anything you paste.
+        A suspected vulnerability (a tampered skill, a way around the sandbox probe or the protected-file checks, a prompt-injection path) goes through [SECURITY.md](https://github.com/sairam0424/nh-skills/blob/main/SECURITY.md), not here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is affected?
+      options:
+        - nh-chaos-monkey (running the skill)
+        - nh-chaos-monkey (installing it)
+        - Sandbox probe (scripts/sandbox-probe.mjs)
+        - Validator or tests in this repository
+        - Documentation
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release tag you installed (for example v0.1.0), or the commit if you used main.
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Copied the folder from a release or a clone
+        - npx skills add
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, Claude Code version, Node.js and git versions
+      description: For example "macOS 15, Claude Code 2.1.x, Node 22, git 2.47".
+    validations:
+      required: true
+  - type: dropdown
+    id: sandbox
+    attributes:
+      label: Was the session inside an OS-level sandbox, container or VM?
+      options:
+        - "No (I accepted the risk)"
+        - "Yes, macOS Seatbelt"
+        - "Yes, a container or VM"
+        - "Yes, something else"
+        - "Not applicable"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: The command you ran
+      description: The exact `/nh-chaos-monkey ...` line, including your judge command and any flags.
+      render: shell
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+      description: Paste exact output, not a paraphrase. For a wrong or unclear sentence, quote it and say what is wrong.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets, tokens and private code from everything above.
+          required: true
