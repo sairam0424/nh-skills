@@ -45,7 +45,7 @@ Without a sandbox the loop still works and its checks still run, but its prompts
 node scripts/sandbox-probe.mjs --workdir /abs/worktree --scratch /abs/scratch
 ```
 
-Run it where the agents run, not in a different shell, and after the worktree and scratch directory exist (the end of Step 2 in SKILL.md). A "blocked" network result also holds when the machine is offline, so it shows the attempt failed, not why. The loop can run it for you: pass requireSandbox true and probePath (the absolute path of the script) and an agent runs it through its own Bash tool before the judge executes any project code; any allowed or unresolved probe halts the run with sandbox-not-enforced. The agent relays the probe's JSON, so its verdict is an agent's report of an incomplete test: run the probe yourself as well.
+Run it where the agents run, not in a different shell, and after the worktree and scratch directory exist (Step 2, item 5 in SKILL.md, before the install and the judge). A "blocked" network result also holds when the machine is offline, so it shows the attempt failed, not why. The loop can run it for you: pass requireSandbox true and probePath (the absolute path of the script) and an agent runs it through its own Bash tool before the judge executes any project code; any allowed or unresolved probe halts the run with sandbox-not-enforced. The agent relays the probe's JSON, so its verdict is an agent's report of an incomplete test: run the probe yourself as well.
 
 ## Git worktree hazards
 
