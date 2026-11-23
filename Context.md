@@ -8,7 +8,7 @@ nh-skills is a personal, curated collection of Claude Code Agent Skills (`SKILL.
 
 nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live GitHub repos with green CI) — this file only tracks nh-skills' own state; see each sibling's own `Context.md` for theirs, and `../Not-Humans-Lab/status.md` for the cross-project rollup.
 
-## Current state (as of 2026-11-14)
+## Current state (as of 2026-11-23)
 
 - **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
 - **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the exception is the code bundled with `nh-chaos-monkey`: `chaos-loop.js`, a script written to run inside the Claude Code Workflow tool, and `sandbox-probe.mjs`, a plain Node CLI the skill runs as a safety check). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run in CI by the `validate-skills.yml` job (`AGENTS.md` lists the whole CI set-up).
@@ -67,4 +67,4 @@ Proposed on 2026-11-23 and recorded here so the bar does not move. Status as of 
 - **No outside contributors exist yet**, so the "revisit at 30-40 skills or outside contributors" threshold is untested — the actual pain points that would justify more tooling are still hypothetical.
 
 ---
-*Last updated: 2026-11-14. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*
+*Last updated: 2026-11-23. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*

@@ -200,8 +200,8 @@ Live runs of the release candidate, checked by hand afterwards (details in learn
 
 | Run | Fixture | Outcome | Agents | Subagent tokens | Time |
 | --- | --- | --- | --- | --- | --- |
-| Inside Claude Code's sandbox | two planted JavaScript bugs, 1 round | 2 fixed; judge 4 to 9; the probe reported enforced; a write outside the allowed folders was refused | 24 | 0.65M | 13 min |
-| Python | pager.py with planted bugs, 1 round | 2 fixed; judge 7 to 17; 2 leads left | 17 | 1.48M | 5 min |
-| Real library | jshttp/negotiator 1.1.0, no lockfile, 366 dev packages, 1 round, cap 3 | 3 fixed; judge 253 to 296; independent reviewers judged 2 real defects with acceptable fixes and 1 debatable and too broad | 25 | 2.48M | 24 min |
+| Inside Claude Code's sandbox | two planted JavaScript bugs, 1 round, cap 2 findings | 2 fixed; judge 4 to 9; the probe reported enforced; a write outside the allowed folders was refused | 24 | 0.65M | 13 min |
+| Python | pager.py (three helpers) with planted bugs, 1 round, cap 3 findings | 2 fixed; judge 7 to 17; 2 leads left | 17 | 1.48M | 5 min |
+| Real library | jshttp/negotiator 1.1.0, no lockfile, 366 dev packages, 1 round, cap 3 findings | 3 fixed; judge 253 to 296; independent reviewers judged 2 real defects with acceptable fixes and 1 debatable and too broad | 25 | 2.48M | 24 min |
 
 Figures are the sessions' own reports. The sandbox run was repeated on the final text with the same result. Not exercised: Go, a project with a build step, a whole-process sandbox around a live loop, and Claude Code's sandbox on Linux or Windows.

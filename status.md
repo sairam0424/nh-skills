@@ -3,7 +3,7 @@
 > Living snapshot. Update this file whenever phase, health, or active work
 > changes — do not let it go stale across a phase boundary.
 
-**Last updated:** 2026-11-14
+**Last updated:** 2026-11-23
 
 ## Overall Status
 
@@ -90,6 +90,7 @@ for the full rationale.
   provenance for it beyond git history. Each release now attaches a SHA-256
   of its archive, which covers integrity at download time; the manifest
   scheme itself stays deferred (see `SECURITY.md`).
-- **Risk:** squash-merge-only is a convention, not a setting — the repository
-  also allows merge commits and rebase merges, and PR #22 landed as a merge
-  commit (see `Context.md`, Open risks).
+- **Note:** squash-merge-only was a convention until v0.1.0 (PR #22 landed as a
+  merge commit). Since the repository became public, its settings allow only
+  squash merges and a ruleset on `main` requires a pull request and the
+  `gitleaks` check (see `Context.md`, Open risks).
