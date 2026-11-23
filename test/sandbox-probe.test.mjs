@@ -147,6 +147,8 @@ const CONFIG_NAMES = [
   ["GIT", "AUTHOR", "NAME"],
   ["PYTHONPATH"],
   ["GIT", "SSH", "COMMAND"],
+  ["PWD"],
+  ["OLDPWD"],
 ].map((parts) => parts.join("_"));
 
 // Names that carry a credential, whatever provider prefix they have.

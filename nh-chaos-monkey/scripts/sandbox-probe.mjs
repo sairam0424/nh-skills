@@ -37,10 +37,11 @@ const CREDENTIAL_PATHS = [
 // AWS_REGION or ANTHROPIC_DEFAULT_SONNET_MODEL is configuration that a Bedrock-backed session needs, and
 // flagging it would make "enforced" unreachable there. AWS_ACCESS_KEY_ID, AWS_SESSION_TOKEN, GH_TOKEN and
 // ANTHROPIC_API_KEY still match through their credential word. TOKEN must not be followed by another letter,
-// so a count such as CLAUDE_CODE_MAX_OUTPUT_TOKENS is not a credential. PAT, PWD, PASS, PASSPHRASE and AUTH
-// count only as whole words between underscores (GITHUB_PAT, SSH_AUTH_SOCK, MYSQL_PWD), never inside
-// PYTHONPATH or GIT_AUTHOR_NAME.
-const SECRET_ENV = /(TOKEN(?![A-Z])|SECRET|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|CREDENTIAL|PRIVATE_?KEY|CUSTOM_HEADERS|(^|_)(PAT|PWD|PASS|PASSPHRASE|AUTH)(_|$))/i;
+// so a count such as CLAUDE_CODE_MAX_OUTPUT_TOKENS is not a credential. PAT, PASS, PASSPHRASE and AUTH
+// count only as whole words between underscores (GITHUB_PAT, SSH_AUTH_SOCK), never inside PYTHONPATH or
+// GIT_AUTHOR_NAME. PWD counts only as a suffix word (MYSQL_PWD): a bare PWD or OLDPWD is the current
+// directory that every shell sets.
+const SECRET_ENV = /(TOKEN(?![A-Z])|SECRET|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|CREDENTIAL|PRIVATE_?KEY|CUSTOM_HEADERS|_PWD(_|$)|(^|_)(PAT|PASS|PASSPHRASE|AUTH)(_|$))/i;
 
 const rand = () => randomBytes(6).toString("hex");
 const verdict = (name, result, detail) => ({ name, result, detail });
