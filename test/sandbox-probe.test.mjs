@@ -174,6 +174,51 @@ test("names that carry a credential stay reported, with their names and never th
   assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
 });
 
+// Claude Code's built-in sandbox injects the login for its own loopback proxy into every sandboxed shell.
+// That login only reaches the proxy the sandbox already bounds, so the probe must not count it as a leaked secret.
+const PROXY_USER = ["CLOUDSDK", "PROXY", "USERNAME"].join("_");
+const PROXY_PASS = ["CLOUDSDK", "PROXY", "PASSWORD"].join("_");
+const proxyEnv = (extra = {}) => ({
+  SANDBOX_RUNTIME: "1",
+  CLOUDSDK_PROXY_ADDRESS: "127.0.0.1",
+  [PROXY_USER]: "u".repeat(20),
+  [PROXY_PASS]: SECRET_VALUE,
+  ...extra,
+});
+const envProbe = async (t, env) => {
+  const world = makeWorld(t);
+  const { report } = await withListener((target) => runProbe(world, { net: target, env }));
+  return { probe: report.probes.find((p) => p.name === "env-secrets"), report };
+};
+
+test("the sandbox runtime's own loopback proxy login is not counted as a leaked secret, and the probe says it ignored it", async (t) => {
+  const { probe, report } = await envProbe(t, proxyEnv());
+  assert.equal(probe.result, "blocked", probe.detail);
+  assert.ok(probe.detail.includes(PROXY_PASS) && probe.detail.includes("ignored"), probe.detail);
+  assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
+});
+
+test("the same proxy variables are flagged outside the sandbox runtime", async (t) => {
+  const { SANDBOX_RUNTIME, ...withoutRuntime } = proxyEnv();
+  const { probe } = await envProbe(t, withoutRuntime);
+  assert.equal(probe.result, "allowed");
+  assert.ok(probe.detail.includes(PROXY_PASS));
+});
+
+test("a proxy that is not on loopback is flagged even inside the sandbox runtime", async (t) => {
+  const { probe } = await envProbe(t, proxyEnv({ CLOUDSDK_PROXY_ADDRESS: "203.0.113.7" }));
+  assert.equal(probe.result, "allowed");
+  assert.ok(probe.detail.includes(PROXY_PASS));
+});
+
+test("a real credential next to the sandbox's proxy login is still flagged, and the proxy login is still reported as ignored", async (t) => {
+  const { probe, report } = await envProbe(t, proxyEnv({ [CREDENTIAL_NAMES[7]]: SECRET_VALUE }));
+  assert.equal(probe.result, "allowed");
+  assert.ok(probe.detail.includes(CREDENTIAL_NAMES[7]), probe.detail);
+  assert.ok(probe.detail.includes("ignored"), probe.detail);
+  assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
+});
+
 test("a refused connection counts as a reachable network, not as a block", async (t) => {
   const world = makeWorld(t);
   const closed = await new Promise((resolve) => {

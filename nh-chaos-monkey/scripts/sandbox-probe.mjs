@@ -145,11 +145,22 @@ function probeGitState(workdir) {
   return results;
 }
 
+// Claude Code's built-in sandbox (sandbox-runtime) puts the login for its own loopback proxy into every
+// sandboxed shell, under CLOUDSDK_PROXY_USERNAME and CLOUDSDK_PROXY_PASSWORD. That login only reaches the
+// proxy the sandbox already bounds, so it is not counted as a leaked secret, but it is always reported.
+// The exception needs both SANDBOX_RUNTIME=1 and a loopback proxy address, and covers only those two names.
+const SANDBOX_PROXY_LOGIN = /^CLOUDSDK_PROXY_(USERNAME|PASSWORD)$/;
+const LOOPBACK_ADDRESS = /^(127\.0\.0\.1|localhost|\[?::1\]?)$/i;
+
 function probeEnvironment(env) {
-  const names = Object.keys(env).filter((k) => SECRET_ENV.test(k));
+  const inSandboxRuntime = env.SANDBOX_RUNTIME === "1" && LOOPBACK_ADDRESS.test(env.CLOUDSDK_PROXY_ADDRESS || "");
+  const matching = Object.keys(env).filter((k) => SECRET_ENV.test(k));
+  const ignored = inSandboxRuntime ? matching.filter((k) => SANDBOX_PROXY_LOGIN.test(k)) : [];
+  const names = matching.filter((k) => !ignored.includes(k));
+  const note = ignored.length ? "; ignored, the sandbox runtime's own loopback proxy login: " + ignored.sort().join(", ") : "";
   return names.length
-    ? verdict("env-secrets", "allowed", "secret-looking variables visible: " + names.sort().join(", "))
-    : verdict("env-secrets", "blocked", "no secret-looking variable names");
+    ? verdict("env-secrets", "allowed", "secret-looking variables visible: " + names.sort().join(", ") + note)
+    : verdict("env-secrets", "blocked", "no secret-looking variable names" + note);
 }
 
 export async function runProbes({ workdir, scratch, net: target = "1.1.1.1:443", home = os.homedir(), env = process.env }) {
