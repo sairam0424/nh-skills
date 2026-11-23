@@ -50,7 +50,7 @@ for the full rationale.
   deterministic test harness (the real `chaos-loop.js` run against scripted fake
   agents), a fault-injection lens, a sandbox probe and gate, a tested git-state
   snapshot command and a `learning.md` journal (#14 and #15 were closed in
-  favour of #16). `npm test` reports 264 passing results across 21 test files
+  favour of #16). `npm test` reports 273 passing results across 21 test files on the v0.2.0 release branch (2026-11-23)
   and 2 helper files. The live runs of 2026-11-08 are in
   `nh-chaos-monkey/references/loop-design.md`; the later live runs and the
   end-to-end verification are in `nh-chaos-monkey/learning.md`.
