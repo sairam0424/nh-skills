@@ -176,7 +176,7 @@ Releases are tagged `vMAJOR.MINOR.PATCH`, and each release's notes list what cha
 
 ## Contributing and support
 
-This is one person's collection, so support is best effort with no SLA; see [`SUPPORT.md`](SUPPORT.md). Bug reports, unclear docs and small fixes are welcome as issues and pull requests. A new skill should be a focused task with a clear *when to use it* in its `description`, and a skill that shells out or touches the network goes through the security review described in [`AGENTS.md`](AGENTS.md).
+This is one person's collection, so support is best effort with no SLA; see [`SUPPORT.md`](SUPPORT.md). Bug reports, unclear docs and small fixes are welcome as issues and pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). A new skill should be a focused task with a clear *when to use it* in its `description`, and a skill that shells out or touches the network goes through the security review described in [`AGENTS.md`](AGENTS.md).
 
 To add or change a skill:
 
