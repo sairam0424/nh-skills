@@ -45,6 +45,19 @@ Grow the skill catalog gradually, one skill at a time, proving the author-to-mer
 
 nh-deck and daily-dose have completed their own Phases 3-6 — see their own repos/Context.md files for their state; this repo's roadmap only concerns nh-skills' own next skill additions.
 
+## Bar for calling nh-chaos-monkey stable (1.0)
+
+Proposed on 2026-11-23 and recorded here so the bar does not move. Status as of v0.2.0:
+
+| Criterion | Status |
+| --- | --- |
+| No open medium finding in issue #25 | Partly: the run order is fixed and tested; the narrower built-in protected set and the probe's coverage of more credential files remain, and are documented in the README |
+| One recorded live run inside an OS sandbox | Met (2026-11-23: Claude Code's built-in sandbox on macOS, two full fixing loops) |
+| One non-JavaScript live run on the current version | Met (2026-11-23: a Python fixture) |
+| A fixing run on a real library, with the fixes judged independently | Met once (negotiator: 2 of 3 fixes real, 1 debatable); more than one library would be stronger |
+| Community files (contributing guide, issue and PR templates, code of conduct) | Met |
+| At least two outside runs, reported through the issue form, with no skill-level defect | Not met: there are no outside runs yet |
+
 ## Open risks
 
 - **One skill is in the repo.** The loop was proven twice before the reset; with `nh-chaos-monkey` as the only skill, repeatability is untested again until a second skill lands.

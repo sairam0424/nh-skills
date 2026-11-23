@@ -126,7 +126,7 @@ What it does not do: inject faults into running services, networks or Claude Cod
 - In a claude -p session the loop runs as a background workflow, and claude -p stops background work still running ten minutes after the session's last turn (stderr: "Background tasks still running 10m after the last turn ... stopping them"). A two-fix run hit this on 2026-11-09: both fixes were already committed, but the session exited with status 0 before Step 4. The launcher can set CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 before starting claude -p; that lifts the ceiling, and the loop then has no wall-clock limit of its own, so give the process an outer timeout.
 - Confirmed does not mean contract-valid. In the one recall run on code with no planted bugs (2026-11-09, one module, a filtered judge), independent reviewers reading the code judged 2 of 4 confirmed breaks by design or unreachable. A reproducer that fails twice proves a behaviour, not that the module's documentation forbids it: read each confirmed break against the module's own contract and its real callers before treating it as a defect.
 - A halt in the middle of a round, after a commit, skips the independent rejudge for that round. The commits exist, the rounds list may be empty for it, and only Step 4 checks them.
-- The sandbox probe verdict reaches the loop through an agent's relay of the probe's JSON, and the probe tests a direct TCP connect, not a proxy, and only the credential locations it lists.
+- The sandbox probe verdict reaches the loop through an agent's relay of the probe's JSON, and the probe tests a direct TCP connect, not a proxy, and only the credential locations it lists. Inside Claude Code's built-in sandbox the probe ignores that sandbox's own loopback proxy login when it matches the one embedded in the proxy URLs and lists it in an ignored field; the relay keeps only the verdict and the allowed probes, so an ignored login is visible only in the probe's own output.
 - Mutation-guided breaking (real mutants executed by a mutation tool) would give a stronger signal than model-written reproducers where a mutation tool exists. It needs different confirmation semantics (see the lens catalogue) and is not implemented.
 
 ## Editing the script
@@ -193,3 +193,15 @@ Independent review before merge (2026-11-08, 57 agents, about 9.3M subagent toke
 The negative tests were not repeated on the final version. The code they cover was not edited afterwards except argument path validation, which the final runs exercised with valid paths. The git checks behind the protected-file rules (renames, type changes, added files, hook and config tampering) were also exercised directly in scratch repositories, not only through the loop.
 
 Not exercised on the final version: a real verifier outage after the probe, the lead and invalid classes, the added-file and reproducer-name rejection paths inside the loop (they are covered only by direct git checks), languages other than JavaScript, a project with a build step or a slow judge, and any run inside an OS sandbox. Treat those paths as untested. A rejected fix attempt fed back to the fixer with the verifier's reasons has been exercised once, on the real project.
+
+### 2026-11-23, release candidate
+
+Live runs of the release candidate, checked by hand afterwards (details in learning.md):
+
+| Run | Fixture | Outcome | Agents | Subagent tokens | Time |
+| --- | --- | --- | --- | --- | --- |
+| Inside Claude Code's sandbox | two planted JavaScript bugs, 1 round | 2 fixed; judge 4 to 9; the probe reported enforced; a write outside the allowed folders was refused | 24 | 0.65M | 13 min |
+| Python | pager.py with planted bugs, 1 round | 2 fixed; judge 7 to 17; 2 leads left | 17 | 1.48M | 5 min |
+| Real library | jshttp/negotiator 1.1.0, no lockfile, 366 dev packages, 1 round, cap 3 | 3 fixed; judge 253 to 296; independent reviewers judged 2 real defects with acceptable fixes and 1 debatable and too broad | 25 | 2.48M | 24 min |
+
+Figures are the sessions' own reports. The sandbox run was repeated on the final text with the same result. Not exercised: Go, a project with a build step, a whole-process sandbox around a live loop, and Claude Code's sandbox on Linux or Windows.
