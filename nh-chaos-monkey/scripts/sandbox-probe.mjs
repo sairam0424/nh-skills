@@ -22,7 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BLOCK_CODES = new Set(["EACCES", "EPERM", "EROFS"]);
-const CREDENTIAL_PATHS = [
+export const CREDENTIAL_PATHS = [
   ".ssh/id_rsa",
   ".ssh/id_ed25519",
   ".aws/credentials",
@@ -32,7 +32,17 @@ const CREDENTIAL_PATHS = [
   ".kube/config",
   ".docker/config.json",
   ".config/gcloud/credentials.db",
+  ".git-credentials",
+  ".azure/msal_token_cache.json",
+  ".config/gcloud/application_default_credentials.json",
+  ".pypirc",
+  ".cargo/credentials.toml",
+  ".terraform.d/credentials.tfrc.json",
 ];
+// Only these two codes mean "the sandbox refused". Anything else (a symlink loop, too many open files,
+// an I/O error) says nothing about the sandbox, so it is undecided, never a pass.
+const REFUSAL_CODES = new Set(["EACCES", "EPERM"]);
+const ABSENT_CODES = new Set(["ENOENT", "ENOTDIR"]);
 // A name is secret-looking when it contains a credential word. Provider prefixes alone are not enough:
 // AWS_REGION or ANTHROPIC_DEFAULT_SONNET_MODEL is configuration that a Bedrock-backed session needs, and
 // flagging it would make "enforced" unreachable there. AWS_ACCESS_KEY_ID, AWS_SESSION_TOKEN, GH_TOKEN and
@@ -73,25 +83,30 @@ function openForWrite(name, file) {
   }
 }
 
-function probeCredentialReads(home) {
-  const found = [];
+export function probeCredentialReads(home, fsImpl = fs) {
   const readable = [];
+  const refused = [];
+  const undecided = [];
   for (const rel of CREDENTIAL_PATHS) {
     const file = path.join(home, rel);
     let fd;
     try {
-      fd = fs.openSync(file, "r"); // open and close only; no byte is ever read
-      readable.push(rel);
+      // Non-blocking, so a named pipe at this path cannot make the probe wait for a writer.
+      fd = fsImpl.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK); // open and close only; no byte is ever read
+      if (fsImpl.fstatSync(fd).isFile()) readable.push(rel); // a directory or a pipe is not a credential file (a socket cannot be opened and is undecided below)
     } catch (e) {
-      if (e.code === "ENOENT" || e.code === "ENOTDIR") continue;
-      found.push(rel);
+      if (ABSENT_CODES.has(e.code)) continue;
+      if (REFUSAL_CODES.has(e.code)) refused.push(rel);
+      else undecided.push(rel + " (" + String(e.code || e.message) + ")");
     } finally {
-      if (fd !== undefined) fs.closeSync(fd);
+      if (fd !== undefined) fsImpl.closeSync(fd);
     }
   }
   if (readable.length) return verdict("read-credentials", "allowed", "openable: " + readable.join(", "));
-  if (found.length) return verdict("read-credentials", "blocked", "refused: " + found.join(", "));
-  return verdict("read-credentials", "unknown", "none of the usual credential files exist here");
+  if (undecided.length) return verdict("read-credentials", "unknown", "undecided: " + undecided.join(", "));
+  if (refused.length) return verdict("read-credentials", "blocked", "refused: " + refused.join(", "));
+  // Nothing exists: the probe cannot tell a working sandbox from an empty home. This is the one tolerated unknown.
+  return { ...verdict("read-credentials", "unknown", "no regular file at any of the usual credential paths"), absent: true };
 }
 
 function probeNetwork(target) {
@@ -188,9 +203,9 @@ export async function runProbes({ workdir, scratch, net: target = "1.1.1.1:443",
     await probeNetwork(target),
   ];
   const allowed = probes.filter((p) => p.result === "allowed").map((p) => p.name);
-  // A probe that could not be evaluated is not a pass, except the credential probe: when none of the
-  // usual credential files exist there is nothing there to protect.
-  const unresolved = probes.filter((p) => p.result === "unknown" && p.name !== "read-credentials").map((p) => p.name);
+  // A probe that could not be evaluated is not a pass, except the credential probe when none of the
+  // usual credential files exist: there is nothing there to protect. An undecided credential probe counts.
+  const unresolved = probes.filter((p) => p.result === "unknown" && !(p.name === "read-credentials" && p.absent === true)).map((p) => p.name);
   return { verdict: allowed.length ? "not-enforced" : unresolved.length ? "incomplete" : "enforced", allowed, unresolved, probes };
 }
 

@@ -40,6 +40,7 @@ for the full rationale.
 
 ## Recent Progress
 
+- 2026-11-23: v0.2.0 released (PR #27, tag v0.2.0). v0.2.1 prepared on a branch: probe error classes and 15 credential locations, a wider default protected set, a wider judge screen with a fenced judge command, cleaned output tails with untrustedFields, and a hooks-off worktree command with a config pre-check and a scrubbed npm install, each fixed test-first after eight read-only reproductions and two independent review rounds. The release waits for the owner's go.
 - 2026-11-23: release candidate for v0.2.0 prepared. The sandbox probe now runs before the install and the judge (A/B-tested), the probe's name rules and its sandbox-runtime exception were tightened with tests, the community files were added, and live runs on the candidate covered Claude Code's sandbox on macOS, a Python fixture and a real library. See `nh-chaos-monkey/learning.md`.
 - 2026-11-21: v0.1.0 released and the repository made public. Release assets are an archive of `nh-chaos-monkey/` and its SHA-256. The install routes in the README were checked from the public URL: a clone pinned to the tag, the release archive's checksum, and the `skills` CLI in a throwaway project. Settings now: squash-only merges, a ruleset on `main` (pull request and `gitleaks` check required, no force-push or deletion), secret scanning with push protection, Dependabot alerts, CodeQL, and private vulnerability reporting. Open items from the pre-release review are tracked in issue #25.
 - 2026-11-14: refreshed `Context.md`, this file, `codebase_map.md`, `AGENTS.md`,
@@ -50,7 +51,7 @@ for the full rationale.
   deterministic test harness (the real `chaos-loop.js` run against scripted fake
   agents), a fault-injection lens, a sandbox probe and gate, a tested git-state
   snapshot command and a `learning.md` journal (#14 and #15 were closed in
-  favour of #16). `npm test` reports 273 passing results across 21 test files on the v0.2.0 release branch (2026-11-23)
+  favour of #16). `npm test` reports 307 passing results across 23 test files on the v0.2.1 branch (2026-11-23)
   and 2 helper files. The live runs of 2026-11-08 are in
   `nh-chaos-monkey/references/loop-design.md`; the later live runs and the
   end-to-end verification are in `nh-chaos-monkey/learning.md`.

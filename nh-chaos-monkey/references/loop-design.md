@@ -54,9 +54,9 @@ The script refuses unknown argument names and wrong types, and the result's sett
 | Argument | Default | Meaning |
 | --- | --- | --- |
 | workdir, scratch | required | Absolute paths (letters, digits and ._/- only) of the linked worktree and a separate scratch directory |
-| judgeCmd | required | The project's own test command; screened best-effort for pipes, semicolons, a background ampersand and narrowing flags |
+| judgeCmd | required | The project's own test command; screened best-effort for pipes, semicolons, a background ampersand, redirection, command substitution, eval, sh -c and narrowing flags (the README lists them) |
 | target | required | What to attack, reduced to a safe character set |
-| protectedPaths | built-in set | Pathspecs added to the built-in protected set (tests, CI, hooks, ignore file, lint, type and runner config, lockfiles, manifests and tool-config files such as .npmrc) |
+| protectedPaths | built-in set | Pathspecs added to the built-in protected set (listed as DEFAULT_PROTECTED in scripts/chaos-loop.js; the judge protocol says what it covers and what it leaves out) |
 | replaceProtectedDefaults | false | true makes protectedPaths the whole set; needs protectedPaths |
 | lenses | five defaults | Up to six {key, brief} entries; briefs are trimmed to 600 characters; extra lenses are not run and the log says which |
 | reproRunners | node, node --test, python3, python, pytest, bash, sh, ruby, deno run, bun, go run, php | The only commands a reproducer may start with |
@@ -90,10 +90,10 @@ Any halt other than the first two rows adds a warning that the worktree may hold
 | Worktree on a chaos/* branch, not the primary checkout | Script reads git directories and branch from the isolation probe agent and halts before the judge runs | Checked, but the values come from an agent |
 | Judge green, counted tests, manifest self-check | Script compares returned integers | Checked, same caveat |
 | Reproducer and command shape, safe paths, text charset | Script validates strings before using them | Enforced in code |
-| Judge command screened for pipes, semicolons, a background ampersand and common narrowing flags | Script refuses the run on a match | Best-effort denylist (it misses many narrowing options); the user's confirmation in Step 1 is the real control |
+| Judge command screened for pipes, semicolons, a background ampersand, redirection, command substitution, sh -c and common narrowing flags | Script refuses the run on a match | Best-effort denylist (it misses many narrowing options); the user's confirmation in Step 1 is the real control |
 | Fix verdict | Script computes it from the verifier's returned numbers and flags, never from a verifier "pass" field | Enforced in code, inputs from an agent |
 | Independent rejudge agrees | Script halts on any mismatch | Enforced in code |
-| No network, no push, no reading secrets, fixer write scope, no writes in .git | Preamble in every prompt | Requested only |
+| No network, no push, no reading secrets, fixer write scope, no hand edits in .git (only the git commands a prompt quotes) | Preamble in every prompt | Requested only |
 | Real isolation | OS sandbox chosen by the user | Not provided here |
 
 Agents are language models running shell commands, so every "checked" row means the script checked what an agent said it saw. The main session's final run of the judge, the manifest check and the name-status diff against the base commit, plus each fix's reproducer re-run and its regression test run on the tree just before the fix, are what turn the loop's output into proof.
@@ -115,14 +115,14 @@ What it does not do: inject faults into running services, networks or Claude Cod
 ## Known limits
 
 - Agents run every command, so the loop's output is evidence to check, not proof. A reproducer is arbitrary code by design, so validating its path and command does not make running it safe; only a sandbox does.
-- The git stash is shared between a worktree and the primary checkout, and git hooks live in the shared git directory. The loop disables hooks for its own commits and forbids writes in .git, but only the main session's shared git state snapshot comparison (see the judge protocol) detects tampering. Files that git ignores, such as dependency folders and build output, are watched by nothing in the loop.
+- The git stash is shared between a worktree and the primary checkout, and git hooks live in the shared git directory. The loop disables hooks for its own commits and forbids hand edits in .git (only the git commands a prompt quotes may change it), but only the main session's shared git state snapshot comparison (see the judge protocol) detects tampering. Files that git ignores, such as dependency folders and build output, are watched by nothing in the loop.
 - The manifest protects existing files only. Renames, deletions and type changes are caught by a separate git check against the base commit, and any file added under the protected paths other than the declared regression tests is flagged. Added files elsewhere (for example new source files) are checked by the verifier's diff review, which is a model judgement.
 - There is no hidden oracle: nothing measures whether fixes overfit the breakers' reproducers. A held-out set of reproducers the fixer never sees would measure that.
 - The regression test path that the added-file rule allows still comes from the fixer, but the script now requires it to be among the changed files, to look like a test file (the default pattern covers common layouts for several languages and regressionTestPattern replaces it), to avoid hidden, config and fixture locations, and not to repeat an earlier fix's test. Only one new file under the protected paths is allowed per fix, so a fix that legitimately needs a new fixture or helper file there is rejected, which costs attempts but fails closed.
 - Severity is the breaker's own claim and corroboration only counts lenses that reported the same location or title, so ranking is a heuristic. The backlog keeps the rest, but a run that ends on its round cap leaves some candidates unexamined; the result lists them as leads.
 - Judge output and agent summaries can contain secrets and are kept in the scratch directory and the workflow transcript. Scan before sharing, delete after review.
 - Reproducer quality depends on the language and the project's test tooling. See the validation history for what has actually been exercised.
-- Raw judge output and reproducer output tails (baseline, rejudge and each finding's observed output) are returned to the main session as the agents wrote them. Treat the result as untrusted data.
+- Judge and reproducer output tails (baseline, rejudge and each finding's observed output) are cut to their last words and reduced to a small character set, and the result lists them in untrustedFields, but they are not fenced and prose in them is still text from the repository. Treat the result as untrusted data.
 - In a claude -p session the loop runs as a background workflow, and claude -p stops background work still running ten minutes after the session's last turn (stderr: "Background tasks still running 10m after the last turn ... stopping them"). A two-fix run hit this on 2026-11-09: both fixes were already committed, but the session exited with status 0 before Step 4. The launcher can set CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 before starting claude -p; that lifts the ceiling, and the loop then has no wall-clock limit of its own, so give the process an outer timeout.
 - Confirmed does not mean contract-valid. In the one recall run on code with no planted bugs (2026-11-09, one module, a filtered judge), independent reviewers reading the code judged 2 of 4 confirmed breaks by design or unreachable. A reproducer that fails twice proves a behaviour, not that the module's documentation forbids it: read each confirmed break against the module's own contract and its real callers before treating it as a defect.
 - A halt in the middle of a round, after a commit, skips the independent rejudge for that round. The commits exist, the rounds list may be empty for it, and only Step 4 checks them.

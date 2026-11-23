@@ -70,7 +70,7 @@ nh-skills/
   test/
     validate-skills*.test.mjs  — fixture-based validator self-tests (node:test)
     chaos-loop-*.test.mjs      — the real nh-chaos-monkey loop run against scripted fake agents
-    sandbox-probe.test.mjs, snapshot-command.test.mjs — the probe and the git-state snapshot command
+    sandbox-probe.test.mjs, sandbox-probe-credentials.test.mjs, snapshot-command.test.mjs — the probe, its credential checks and the git-state snapshot command
     support/                   — harness helpers (chaos-loop-harness.mjs, git-env.mjs)
   .github/workflows/
     validate-skills.yml       — CI job, triggers on **/SKILL.md, **/scripts/**, **/references/**, scripts/**, test, fixture, package-file and workflow changes

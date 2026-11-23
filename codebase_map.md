@@ -31,8 +31,9 @@ nh-skills/
 │       └── SKILL.md
 ├── test/
 │   ├── validate-skills*.test.mjs    node:test self-tests for the validator (9 files)
-│   ├── chaos-loop-*.test.mjs        the real chaos-loop.js run against scripted fake agents (10 files)
+│   ├── chaos-loop-*.test.mjs        the real chaos-loop.js run against scripted fake agents (11 files)
 │   ├── sandbox-probe.test.mjs       the sandbox probe (the Seatbelt cases run on macOS only)
+│   ├── sandbox-probe-credentials.test.mjs  the probe's credential checks (error classes, skipped file types, deny-list sync)
 │   ├── snapshot-command.test.mjs    the shared-git-state snapshot command
 │   └── support/                     chaos-loop-harness.mjs, git-env.mjs
 └── .github/
@@ -69,7 +70,7 @@ nh-skills/
 | Change what the validator checks (hard-fail or soft-warn rules) | `scripts/validate-skills.mjs` |
 | Add/adjust a validator test case | `fixtures/valid-skill/` or `fixtures/invalid-skill/`, plus the matching case in `test/` |
 | Change the nh-chaos-monkey loop | `nh-chaos-monkey/scripts/chaos-loop.js` and the matching `test/chaos-loop-*.test.mjs` (change a test first and watch it fail) |
-| Change the sandbox probe | `nh-chaos-monkey/scripts/sandbox-probe.mjs` and `test/sandbox-probe.test.mjs` |
+| Change the sandbox probe | `nh-chaos-monkey/scripts/sandbox-probe.mjs`, `test/sandbox-probe.test.mjs` and `test/sandbox-probe-credentials.test.mjs` |
 | Change when/how CI runs the validator and tests | `.github/workflows/validate-skills.yml` |
 | Add or bump a dependency | `package.json` (should stay at exactly one devDependency: `js-yaml`) |
 | Record a lesson learned or decision | `memory.md` (add one index line + a new topic file) |
