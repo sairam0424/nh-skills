@@ -32,8 +32,8 @@ The documentation itself says the Bash sandbox alone is not enough for unattende
 1. Run the whole agent process under a sandbox that confines files and network: the open-source sandbox runtime from Anthropic (srt; Seatbelt on macOS, bubblewrap and seccomp on Linux), a container or a VM. As of the research it is a beta research preview below 1.0 (v0.0.81, 2026-10-20) with a past security advisory, so pin the exact version, verify it, and never install it under a writable dependency folder.
 2. Configure it explicitly: deny reads of credential locations (an unconfigured srt allows all reads), allow writes only to the worktree and the scratch directory, leave the network allowlist empty, and run as an ordinary user.
 3. If the Claude Code sandbox is used as well, set it enabled and fail-closed: failIfUnavailable true, unsandboxed commands not allowed, no excluded commands, and the environment scrub that strips credentials from subprocesses turned on. The setting names above are as reported by the research; check the current settings reference before pasting them.
-4. Install dependencies from the lockfile with scripts disabled, after the user agrees, and never regenerate a lockfile inside the loop.
-5. Run the preflight probe below inside that environment and pass requireSandbox to the loop so it refuses to start when the probe fails.
+4. Run the preflight probe below inside that environment, before anything executes project code, and pass requireSandbox to the loop so it refuses to start when the probe fails.
+5. Install dependencies from the lockfile with scripts disabled, after the user agrees, with the package manager's cache and logs under the scratch directory, and never regenerate a lockfile inside the loop. With an empty network allowlist the install cannot run inside the sandbox: install into the worktree yourself, or open the network for that one step and re-run the probe before the judge.
 
 Without a sandbox the loop still works and its checks still run, but its prompts only ask agents not to leave the worktree. Say so in the report.
 
