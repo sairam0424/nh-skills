@@ -141,6 +141,14 @@ const CONFIG_NAMES = [
   ["GITHUB", "REPOSITORY"],
   ["GH", "HOST"],
   ["OPENAI", "BASE", "URL"],
+  ["CLAUDE", "CODE", "MAX", "OUTPUT", "TOKENS"],
+  ["MAX", "THINKING", "TOKENS"],
+  ["TOKENIZERS", "PARALLELISM"],
+  ["GIT", "AUTHOR", "NAME"],
+  ["PYTHONPATH"],
+  ["GIT", "SSH", "COMMAND"],
+  ["PWD"],
+  ["OLDPWD"],
 ].map((parts) => parts.join("_"));
 
 // Names that carry a credential, whatever provider prefix they have.
@@ -154,6 +162,15 @@ const CREDENTIAL_NAMES = [
   ["GH", "TOKEN"],
   ["GITHUB", "TOKEN"],
   ["CLOUDSDK", "PROXY", "PASSWORD"],
+  ["AWS", "BEARER", "TOKEN", "BEDROCK"],
+  ["ANTHROPIC", "CUSTOM", "HEADERS"],
+  ["GITHUB", "PAT"],
+  ["GH", "PAT"],
+  ["SSH", "AUTH", "SOCK"],
+  ["MYSQL", "PWD"],
+  ["DB", "PASSPHRASE"],
+  ["DOCKER", "AUTH", "CONFIG"],
+  ["NPM", "CONFIG", "", "AUTH"],
 ].map((parts) => parts.join("_"));
 
 test("configuration names a Bedrock session needs are not reported as secret-looking", async (t) => {
@@ -174,48 +191,87 @@ test("names that carry a credential stay reported, with their names and never th
   assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
 });
 
-// Claude Code's built-in sandbox injects the login for its own loopback proxy into every sandboxed shell.
-// That login only reaches the proxy the sandbox already bounds, so the probe must not count it as a leaked secret.
+// Claude Code's built-in sandbox injects a login for its own loopback proxy into every sandboxed shell, and
+// embeds the same login in HTTPS_PROXY, HTTP_PROXY and ALL_PROXY. That login only reaches the proxy the sandbox
+// already bounds, so the probe must not count it as a leaked secret, but only when it really is that login.
 const PROXY_USER = ["CLOUDSDK", "PROXY", "USERNAME"].join("_");
 const PROXY_PASS = ["CLOUDSDK", "PROXY", "PASSWORD"].join("_");
+const proxyUrl = (host = "127.0.0.1") => `http://${"u".repeat(20)}:${SECRET_VALUE}@${host}:54558`;
 const proxyEnv = (extra = {}) => ({
   SANDBOX_RUNTIME: "1",
   CLOUDSDK_PROXY_ADDRESS: "127.0.0.1",
   [PROXY_USER]: "u".repeat(20),
   [PROXY_PASS]: SECRET_VALUE,
+  HTTPS_PROXY: proxyUrl(),
+  HTTP_PROXY: proxyUrl(),
+  ALL_PROXY: proxyUrl(),
   ...extra,
 });
+const without = (env, ...names) => Object.fromEntries(Object.entries(env).filter(([k]) => !names.includes(k)));
 const envProbe = async (t, env) => {
   const world = makeWorld(t);
   const { report } = await withListener((target) => runProbe(world, { net: target, env }));
   return { probe: report.probes.find((p) => p.name === "env-secrets"), report };
 };
 
-test("the sandbox runtime's own loopback proxy login is not counted as a leaked secret, and the probe says it ignored it", async (t) => {
+test("the sandbox runtime's own loopback proxy login is not counted as a leaked secret, is reported as ignored, and its value is never printed", async (t) => {
   const { probe, report } = await envProbe(t, proxyEnv());
   assert.equal(probe.result, "blocked", probe.detail);
+  assert.deepEqual(probe.ignored, [PROXY_PASS]);
   assert.ok(probe.detail.includes(PROXY_PASS) && probe.detail.includes("ignored"), probe.detail);
   assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
 });
 
-test("the same proxy variables are flagged outside the sandbox runtime", async (t) => {
-  const { SANDBOX_RUNTIME, ...withoutRuntime } = proxyEnv();
-  const { probe } = await envProbe(t, withoutRuntime);
-  assert.equal(probe.result, "allowed");
-  assert.ok(probe.detail.includes(PROXY_PASS));
+test("every loopback spelling the sandbox runtime may use is accepted", async (t) => {
+  for (const address of ["127.0.0.1", "localhost", "LOCALHOST", "::1", "[::1]"]) {
+    const { probe } = await envProbe(t, proxyEnv({ CLOUDSDK_PROXY_ADDRESS: address }));
+    assert.equal(probe.result, "blocked", address + ": " + probe.detail);
+  }
 });
 
-test("a proxy that is not on loopback is flagged even inside the sandbox runtime", async (t) => {
-  const { probe } = await envProbe(t, proxyEnv({ CLOUDSDK_PROXY_ADDRESS: "203.0.113.7" }));
+test("anything that only looks like loopback, or a missing address, is flagged", async (t) => {
+  for (const address of ["127.0.0.1.evil.example", "localhost.evil.example", "127.0.0.2", "0.0.0.0", "::ffff:127.0.0.1", "localhost.", "127.0.0.1:8080", "[::1", "203.0.113.7"]) {
+    const { probe } = await envProbe(t, proxyEnv({ CLOUDSDK_PROXY_ADDRESS: address }));
+    assert.equal(probe.result, "allowed", address);
+    assert.ok(probe.detail.includes(PROXY_PASS), address);
+  }
+  const { probe } = await envProbe(t, without(proxyEnv(), "CLOUDSDK_PROXY_ADDRESS"));
+  assert.equal(probe.result, "allowed", "missing address");
+});
+
+test("SANDBOX_RUNTIME must be exactly 1", async (t) => {
+  for (const value of ["true", "0", "01", "", "yes"]) {
+    const { probe } = await envProbe(t, proxyEnv({ SANDBOX_RUNTIME: value }));
+    assert.equal(probe.result, "allowed", JSON.stringify(value));
+  }
+  const { probe } = await envProbe(t, without(proxyEnv(), "SANDBOX_RUNTIME"));
+  assert.equal(probe.result, "allowed", "unset");
+});
+
+test("a password that is not the one embedded in the proxy URLs is flagged even with every other condition met", async (t) => {
+  const env = proxyEnv({ [PROXY_PASS]: "a-different-corporate-password" });
+  const { probe, report } = await envProbe(t, env);
   assert.equal(probe.result, "allowed");
   assert.ok(probe.detail.includes(PROXY_PASS));
+  assert.ok(!JSON.stringify(report).includes("a-different-corporate-password"));
+  const none = await envProbe(t, without(proxyEnv(), "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"));
+  assert.equal(none.probe.result, "allowed", "no proxy URL at all");
+});
+
+test("names that merely contain the proxy password name are not ignored, in any case", async (t) => {
+  for (const name of [PROXY_PASS + "_X", "MY_" + PROXY_PASS, PROXY_PASS.toLowerCase()]) {
+    const { probe } = await envProbe(t, { ...without(proxyEnv(), PROXY_PASS), [name]: SECRET_VALUE });
+    assert.equal(probe.result, "allowed", name);
+    assert.ok(probe.detail.includes(name), name);
+  }
 });
 
 test("a real credential next to the sandbox's proxy login is still flagged, and the proxy login is still reported as ignored", async (t) => {
-  const { probe, report } = await envProbe(t, proxyEnv({ [CREDENTIAL_NAMES[7]]: SECRET_VALUE }));
+  const real = ["GITHUB", "TOKEN"].join("_");
+  const { probe, report } = await envProbe(t, proxyEnv({ [real]: SECRET_VALUE }));
   assert.equal(probe.result, "allowed");
-  assert.ok(probe.detail.includes(CREDENTIAL_NAMES[7]), probe.detail);
-  assert.ok(probe.detail.includes("ignored"), probe.detail);
+  assert.ok(probe.detail.includes(real), probe.detail);
+  assert.deepEqual(probe.ignored, [PROXY_PASS]);
   assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
 });
 
