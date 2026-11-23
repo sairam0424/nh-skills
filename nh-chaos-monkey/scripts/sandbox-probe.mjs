@@ -33,7 +33,11 @@ const CREDENTIAL_PATHS = [
   ".docker/config.json",
   ".config/gcloud/credentials.db",
 ];
-const SECRET_ENV = /(TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|CREDENTIAL|PRIVATE_?KEY|^AWS_|^ANTHROPIC_|^OPENAI_|^GH_|^GITHUB_)/i;
+// A name is secret-looking when it contains a credential word. Provider prefixes alone are not enough:
+// AWS_REGION or ANTHROPIC_DEFAULT_SONNET_MODEL is configuration that a Bedrock-backed session needs, and
+// flagging it would make "enforced" unreachable there. AWS_ACCESS_KEY_ID, AWS_SESSION_TOKEN, GH_TOKEN and
+// ANTHROPIC_API_KEY all still match through their credential word.
+const SECRET_ENV = /(TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|CREDENTIAL|PRIVATE_?KEY)/i;
 
 const rand = () => randomBytes(6).toString("hex");
 const verdict = (name, result, detail) => ({ name, result, detail });

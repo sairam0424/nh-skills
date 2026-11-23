@@ -130,6 +130,50 @@ test("a clean environment with no secret-looking names passes that probe", async
   assert.equal(byName(report)["env-secrets"], "blocked");
 });
 
+// Configuration a Bedrock-backed Claude Code session needs is not a credential. Names are assembled at run time.
+const CONFIG_NAMES = [
+  ["AWS", "REGION"],
+  ["AWS", "DEFAULT", "REGION"],
+  ["AWS", "PROFILE"],
+  ["ANTHROPIC", "DEFAULT", "SONNET", "MODEL"],
+  ["ANTHROPIC", "DEFAULT", "OPUS", "MODEL", "DESCRIPTION"],
+  ["CLAUDE", "CODE", "USE", "BEDROCK"],
+  ["GITHUB", "REPOSITORY"],
+  ["GH", "HOST"],
+  ["OPENAI", "BASE", "URL"],
+].map((parts) => parts.join("_"));
+
+// Names that carry a credential, whatever provider prefix they have.
+const CREDENTIAL_NAMES = [
+  ["AWS", "ACCESS", "KEY", "ID"],
+  ["AWS", "SECRET", "ACCESS", "KEY"],
+  ["AWS", "SESSION", "TOKEN"],
+  ["ANTHROPIC", "API", "KEY"],
+  ["ANTHROPIC", "AUTH", "TOKEN"],
+  ["OPENAI", "API", "KEY"],
+  ["GH", "TOKEN"],
+  ["GITHUB", "TOKEN"],
+  ["CLOUDSDK", "PROXY", "PASSWORD"],
+].map((parts) => parts.join("_"));
+
+test("configuration names a Bedrock session needs are not reported as secret-looking", async (t) => {
+  const world = makeWorld(t);
+  const env = Object.fromEntries(CONFIG_NAMES.map((n) => [n, "config-value"]));
+  const { report } = await withListener((target) => runProbe(world, { net: target, env }));
+  const probe = report.probes.find((p) => p.name === "env-secrets");
+  assert.equal(probe.result, "blocked", probe.detail);
+});
+
+test("names that carry a credential stay reported, with their names and never their values", async (t) => {
+  const world = makeWorld(t);
+  const env = Object.fromEntries(CREDENTIAL_NAMES.map((n) => [n, SECRET_VALUE]));
+  const { report } = await withListener((target) => runProbe(world, { net: target, env }));
+  const probe = report.probes.find((p) => p.name === "env-secrets");
+  assert.equal(probe.result, "allowed");
+  for (const name of CREDENTIAL_NAMES) assert.ok(probe.detail.includes(name), name + " should be listed");
+  assert.ok(!JSON.stringify(report).includes(SECRET_VALUE));
+});
+
 test("a refused connection counts as a reachable network, not as a block", async (t) => {
   const world = makeWorld(t);
   const closed = await new Promise((resolve) => {
