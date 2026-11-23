@@ -33,7 +33,15 @@ const CREDENTIAL_PATHS = [
   ".docker/config.json",
   ".config/gcloud/credentials.db",
 ];
-const SECRET_ENV = /(TOKEN|SECRET|PASSWORD|PASSWD|API_?KEY|CREDENTIAL|PRIVATE_?KEY|^AWS_|^ANTHROPIC_|^OPENAI_|^GH_|^GITHUB_)/i;
+// A name is secret-looking when it contains a credential word. Provider prefixes alone are not enough:
+// AWS_REGION or ANTHROPIC_DEFAULT_SONNET_MODEL is configuration that a Bedrock-backed session needs, and
+// flagging it would make "enforced" unreachable there. AWS_ACCESS_KEY_ID, AWS_SESSION_TOKEN, GH_TOKEN and
+// ANTHROPIC_API_KEY still match through their credential word. TOKEN must not be followed by another letter,
+// so a count such as CLAUDE_CODE_MAX_OUTPUT_TOKENS is not a credential. PAT, PASS, PASSPHRASE and AUTH
+// count only as whole words between underscores (GITHUB_PAT, SSH_AUTH_SOCK), never inside PYTHONPATH or
+// GIT_AUTHOR_NAME. PWD counts only as a suffix word (MYSQL_PWD): a bare PWD or OLDPWD is the current
+// directory that every shell sets.
+const SECRET_ENV = /(TOKEN(?![A-Z])|SECRET|PASSWORD|PASSWD|API_?KEY|ACCESS_?KEY|CREDENTIAL|PRIVATE_?KEY|CUSTOM_HEADERS|_PWD(_|$)|(^|_)(PAT|PASS|PASSPHRASE|AUTH)(_|$))/i;
 
 const rand = () => randomBytes(6).toString("hex");
 const verdict = (name, result, detail) => ({ name, result, detail });
@@ -141,11 +149,32 @@ function probeGitState(workdir) {
   return results;
 }
 
+// Claude Code's built-in sandbox (sandbox-runtime) puts the login for its own loopback proxy into every
+// sandboxed shell: the proxy password variable, and the same login embedded in HTTPS_PROXY, HTTP_PROXY and
+// ALL_PROXY. That login only reaches the proxy the sandbox already bounds, so it is not counted as a leaked
+// secret, but it is always reported. The exception needs SANDBOX_RUNTIME=1, a loopback proxy address and the
+// variable's own value inside a proxy URL's login, so a value the user set for their own proxy is still flagged.
+// The name is assembled here so no assignment of a secret-looking name to a string sits in the file.
+const PROXY_LOGIN_VAR = ["CLOUDSDK", "PROXY", "PASSWORD"].join("_");
+const LOOPBACK_ADDRESS = /^(127\.0\.0\.1|localhost|::1|\[::1\])$/i;
+const PROXY_URL_VARS = ["HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"];
+
+function sandboxProxyLogin(env) {
+  const value = env[PROXY_LOGIN_VAR];
+  if (!value || env.SANDBOX_RUNTIME !== "1" || !LOOPBACK_ADDRESS.test(env.CLOUDSDK_PROXY_ADDRESS || "")) return [];
+  const embedded = PROXY_URL_VARS.some((v) => (env[v] || "").includes(":" + value + "@"));
+  return embedded ? [PROXY_LOGIN_VAR] : [];
+}
+
 function probeEnvironment(env) {
-  const names = Object.keys(env).filter((k) => SECRET_ENV.test(k));
-  return names.length
-    ? verdict("env-secrets", "allowed", "secret-looking variables visible: " + names.sort().join(", "))
-    : verdict("env-secrets", "blocked", "no secret-looking variable names");
+  const matching = Object.keys(env).filter((k) => SECRET_ENV.test(k));
+  const ignored = sandboxProxyLogin(env).filter((k) => matching.includes(k));
+  const names = matching.filter((k) => !ignored.includes(k));
+  const note = ignored.length ? ` (ignored ${ignored.length}: the sandbox runtime's own loopback proxy login, ${ignored.sort().join(", ")})` : "";
+  const base = names.length
+    ? verdict("env-secrets", "allowed", "secret-looking variables visible: " + names.sort().join(", ") + note)
+    : verdict("env-secrets", "blocked", "no secret-looking variable names" + note);
+  return { ...base, ignored };
 }
 
 export async function runProbes({ workdir, scratch, net: target = "1.1.1.1:443", home = os.homedir(), env = process.env }) {

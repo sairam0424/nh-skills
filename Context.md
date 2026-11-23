@@ -8,14 +8,14 @@ nh-skills is a personal, curated collection of Claude Code Agent Skills (`SKILL.
 
 nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live GitHub repos with green CI) — this file only tracks nh-skills' own state; see each sibling's own `Context.md` for theirs, and `../Not-Humans-Lab/status.md` for the cross-project rollup.
 
-## Current state (as of 2026-11-14)
+## Current state (as of 2026-11-23)
 
-- **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills with green CI.
+- **Phase 1 (pre-scaffold docs) and Phase 2 (walking skeleton) complete.** Repo is live at github.com/sairam0424/nh-skills (Secret Scan and CodeQL passed on `main` on 2026-11-21).
 - **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the exception is the code bundled with `nh-chaos-monkey`: `chaos-loop.js`, a script written to run inside the Claude Code Workflow tool, and `sandbox-probe.mjs`, a plain Node CLI the skill runs as a safety check). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run in CI by the `validate-skills.yml` job (`AGENTS.md` lists the whole CI set-up).
 - **Loop proven twice, then reset on 2026-11-02**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) went through the full author → lint → CI → merge loop and were then removed to start fresh. `nh-chaos-monkey` is the only skill now.
 - **Only skill: `nh-chaos-monkey`** (merged via PR #4 as `nh-breaker`; renamed on 2026-11-08, so PRs #4 to #12 and the older history use the old name). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-chaos-monkey/references/loop-design.md`. Since the rename it gained a deterministic test harness, a fifth default lens (faults), a sandbox probe and gate, a tested git-state snapshot command and a `learning.md` journal of A/B and verification runs (PRs #16 to #22; #14 and #15 were closed in favour of #16).
 - **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
-- **No dedicated test framework.** `npm test` (`node --test`) runs Node's built-in `node:test` over 21 `*.test.mjs` files plus the two helper modules in `test/support/`, which the runner loads too (264 passing results on 2026-11-14, each helper file counting once; no Jest/Vitest/pytest): the validator's fixture-based self-tests and, since PR #16, a deterministic harness that runs the real `chaos-loop.js` against scripted fake agents, plus tests for the sandbox probe and the git-state snapshot command. The tests that need macOS Seatbelt skip themselves on other platforms, so CI on Linux runs the rest.
+- **No dedicated test framework.** `npm test` (`node --test`) runs Node's built-in `node:test` over 21 `*.test.mjs` files plus the two helper modules in `test/support/`, which the runner loads too (273 passing results on the v0.2.0 release branch, 2026-11-23, each helper file counting once; no Jest/Vitest/pytest): the validator's fixture-based self-tests and, since PR #16, a deterministic harness that runs the real `chaos-loop.js` against scripted fake agents, plus tests for the sandbox probe and the git-state snapshot command. The tests that need macOS Seatbelt skip themselves on other platforms, so CI on Linux runs the rest.
 - **License: Apache-2.0**, decided once at the Not-Humans-Lab system level and applied identically across all three sibling projects for enterprise-clearable, patent-safe consistency (see `../Not-Humans-Lab/decisions.md`).
 
 ## Architecture at a glance
@@ -45,6 +45,19 @@ Grow the skill catalog gradually, one skill at a time, proving the author-to-mer
 
 nh-deck and daily-dose have completed their own Phases 3-6 — see their own repos/Context.md files for their state; this repo's roadmap only concerns nh-skills' own next skill additions.
 
+## Bar for calling nh-chaos-monkey stable (1.0)
+
+Proposed on 2026-11-23 and recorded here so the bar does not move. Status as of v0.2.0:
+
+| Criterion | Status |
+| --- | --- |
+| No open medium finding in issue #25 | Partly: the run order is fixed and tested; the narrower built-in protected set and the probe's coverage of more credential files remain, and are documented in the README |
+| One recorded live run inside an OS sandbox | Met (2026-11-23: Claude Code's built-in sandbox on macOS, two full fixing loops) |
+| One non-JavaScript live run on the current version | Met (2026-11-23: a Python fixture) |
+| A fixing run on a real library, with the fixes judged independently | Met once (negotiator: 2 of 3 fixes real, 1 debatable); more than one library would be stronger |
+| Community files (contributing guide, issue and PR templates, code of conduct) | Met |
+| At least two outside runs, reported through the issue form, with no skill-level defect | Not met: there are no outside runs yet |
+
 ## Open risks
 
 - **One skill is in the repo.** The loop was proven twice before the reset; with `nh-chaos-monkey` as the only skill, repeatability is untested again until a second skill lands.
@@ -54,4 +67,4 @@ nh-deck and daily-dose have completed their own Phases 3-6 — see their own rep
 - **No outside contributors exist yet**, so the "revisit at 30-40 skills or outside contributors" threshold is untested — the actual pain points that would justify more tooling are still hypothetical.
 
 ---
-*Last updated: 2026-11-14. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*
+*Last updated: 2026-11-23. Agents: keep this current as work progresses — do not let it go stale while `AGENTS.md`/`SOUL.md`/`CLAUDE.md` stay static.*

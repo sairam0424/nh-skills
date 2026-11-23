@@ -19,7 +19,7 @@ arguments or behaviour, and the release notes say so.
 
 | Version              | Supported          |
 | --------------------- | ------------------- |
-| Latest release (`v0.1.x`) | Yes             |
+| Latest release (`v0.2.x`) | Yes             |
 | `main` (latest commit) | Yes                 |
 | Older releases / forks | No — upgrade to the latest release |
 
