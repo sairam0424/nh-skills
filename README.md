@@ -75,7 +75,7 @@ Each [release](https://github.com/sairam0424/nh-skills/releases) attaches an arc
 
 **Protected paths.** The built-in protected set covers test directories and test and config files by name, CI under `.github`, `.husky`, `Makefile` and `.npmrc`, and the manifests and lockfiles for JavaScript, Python (`pyproject.toml`, `pytest.ini`, `tox.ini`, `setup.cfg`), Rust and Go. Most entries only match at the repository root. It does not cover other CI systems (`.gitlab-ci.yml`, `azure-pipelines.yml`, `.circleci`, `Jenkinsfile`), `requirements*.txt`, `uv.lock`, `poetry.lock`, Ruby, PHP or Java build files, or a nested `package.json` in a monorepo. When the skill asks you to confirm protected paths, add what is missing; your session's final diff review is the backstop.
 
-**Order of events.** The skill creates the worktree, installs dependencies if you allow it and runs the judge once before it runs the sandbox probe, and your session's final checks run project code again. So put the whole session in the sandbox from the start; do not rely on the probe to protect that first judge run.
+**Order of events.** The skill creates the worktree and the git-state snapshot, runs the sandbox probe, and only then installs dependencies (if you allow it) and runs the judge. If the probe does not report enforced it stops before any project code runs, unless you accept the risk. Your session's final checks run project code again, so put the whole session in the sandbox from the start.
 
 **Your judge.** A good judge:
 - is your project's documented test command, run once and exiting (not watch mode), for example `npm test`, `node --test`, `python -m unittest` or `pytest`;
