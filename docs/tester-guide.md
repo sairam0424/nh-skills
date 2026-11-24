@@ -10,6 +10,7 @@ This guide is not drawn from evidence about how other projects run test programm
 - **Run the whole session inside a sandbox, container or VM** as an ordinary user, with no network for the agents' tools and no credentials reachable from your home directory. The skill runs a probe first and stops if it does not report `enforced`. If you cannot sandbox, do not test with this skill yet; `--accept-no-sandbox` is for code you trust, and a tester run is more useful with a sandbox.
 - **Set a spending limit** in your launcher. Unless a token target is set for the turn, the round and finding caps are the only stop.
 - **Have a green judge.** Run your project's documented test command a few times first. It must pass, exit non-zero on failure and print a test count.
+- **Know what your tests need.** If they start a local server, bind a unix socket, run `sandbox-exec`, write to a fixed `/tmp` path, reject home-directory paths or need Docker, the baseline stops. That is correct, and the table "What a project may need allowed inside the sandbox" in [`references/safety-runner.md`](../nh-chaos-monkey/references/safety-runner.md) says what to allow or change. Write the stop down; it is a useful report.
 - **Commit what you want tested.** The worktree starts from `HEAD`; uncommitted changes are not included.
 
 ## The run

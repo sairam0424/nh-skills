@@ -4,7 +4,22 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+### Fixed
+
+- A round in which every breaker ran the code and found nothing is a plateau again. Breakers wrote "No defect found" into the optional `blocked` field and the loop stopped with `breakers-blocked` ("nothing was tested"). Breakers now set `ranProjectCode`; `blocked` counts only when they did not run the code, and a no-defect sentence without the flag no longer counts.
+- A correct fix no longer ends in `independent-rejudge-disagrees-with-verifier-claims` because two agents read a summary such as "2038 passed, 2 skipped" differently: the baseline, verifier and re-judge prompts now carry one passed-only counting rule.
+- Fixers no longer run `git stash` to see their new test fail on the old code (it left stray entries in the stash shared with your checkout); the fixer prompt says how to do it with `git archive` in the scratch directory.
+- A judge that starts with environment assignments (an offline Go cache, a module path) is reproducible by the confirmer: breakers are given the assignments and set them inside the reproducer.
+- Found by the loop on its own source and re-checked by a fresh agent: a non-object or duplicate lens entry and a `workdir` or `scratch` written with a trailing slash defeated the argument checks in `chaos-loop.js`; `sandbox-probe.mjs` crashed when `closeSync` failed and on a malformed or dangling `--net` value (now undecided, and a usage error with exit 2).
+
+### Changed
+
+- `SKILL.md`: Step 2 item 6 says to pass the sandbox's proxy variables through the install scrub (without them `npm ci` fails with ENOTFOUND for an allowed registry); Step 4 gets a report-only item 10 (what the judge did not run, where each changed function is called from, and a fix that turns a failure into silence or flips its direction); Step 5 tells the user to run the project's own lint, type check and CI steps before merging.
+
 ### Documentation
+
+- `references/safety-runner.md`: a table of what a project's tests may need allowed inside the sandbox (loopback, unix sockets, nested `sandbox-exec`, `/tmp`, home paths, Docker, offline toolchains, `--allow-install`), measured on eight real projects.
+- `references/loop-design.md`: new known limits (one fix per regression-test path, runners cannot carry environment variables, the confirm gate and file-path imports, classification varies between runs, what a green judge does not prove) and the validation history of 22 live sessions.
 
 - README: a first-run checklist (dynamic workflows must be on for your plan, `/sandbox`, a Python virtualenv example for `--judge` and `--repro-runner`, start lead-only); the Workflow-tool availability from Anthropic's documentation; install snippet that works for both scopes; `npx skills` pinned to the tested version and its `skills-lock.json` noted; cleanup steps for the scratch directory, the snapshot file and a dirty worktree (`git worktree remove --force`); the probe warning (do not run it by hand outside a sandbox); "Your repository", "Order of events" and the probe split into bullets; a glossary entry for the confirm gate; stale statements corrected (the v0.2.2 tag does carry the plugin manifests, and a tag-pinned install was tested).
 - Found by a first-user read of the published release. The route checks of release v0.2.2 and one fixing run of the published plugin are added to the README's evidence table, and its statements that no loop had been run through the plugin route are corrected.

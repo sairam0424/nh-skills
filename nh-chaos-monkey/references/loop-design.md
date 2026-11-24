@@ -75,7 +75,7 @@ haltReason is set on every return. finished is true only for the first row.
 | --- | --- | --- |
 | plateau, max-rounds, budget | Normal stops: a dry round, the round cap, the token floor | Clean tree unless a rejected attempt was stashed |
 | breakers-unavailable | No breaker answered in a round: nothing was tested | Clean tree |
-| breakers-blocked | No candidate anywhere and at least one breaker said it could not run the project with the allowed runners: nothing was tested | Clean tree |
+| breakers-blocked | No candidate anywhere and at least one breaker said it could not run the project with the allowed runners (a non-empty blocked that is not flagged ranProjectCode true and is not only a no-defect sentence): nothing was tested | Clean tree |
 | reproducers-do-not-run-the-project | Every reproducer of a round was a copy, a simulation or a stub: nothing was tested | Clean tree; the findings are kept as leads or invalid |
 | isolation-check-failed, not-an-isolated-worktree, workdir-not-clean-at-start, sandbox-probe-failed, sandbox-not-enforced, verifier-model-unavailable | Refusals before the judge runs | Nothing changed |
 | baseline-agent-failed, baseline-head-not-a-commit-sha, baseline-judge-red, baseline-test-count-unknown, no-protected-files-found, protected-manifest-self-check-failed, judge-run-left-the-worktree-dirty | The baseline is not a usable steady state; the judge ran once | Judge output may have dirtied the tree |
@@ -131,6 +131,12 @@ What it does not do: inject faults into running services, networks or Claude Cod
 - Confirmed does not mean contract-valid. In the one recall run on code with no planted bugs (2026-11-09, one module, a filtered judge), independent reviewers reading the code judged 2 of 4 confirmed breaks by design or unreachable. A reproducer that fails twice proves a behaviour, not that the module's documentation forbids it: read each confirmed break against the module's own contract and its real callers before treating it as a defect.
 - A halt in the middle of a round, after a commit, skips the independent rejudge for that round. The commits exist, the rounds list may be empty for it, and only Step 4 checks them.
 - The sandbox probe verdict reaches the loop through an agent's relay of the probe's JSON, and the probe tests a direct TCP connect, not a proxy, and only the credential locations it lists. Inside Claude Code's built-in sandbox the probe ignores that sandbox's own loopback proxy login when it matches the one embedded in the proxy URLs and lists it in an ignored field; the relay keeps only the verdict and the allowed probes, so an ignored login is visible only in the probe's own output.
+- A project whose tests all live in one file (a bash self-test, for example) takes one fix per run: the loop rejects a second fix for reusing a regression-test path, so the next finding is reported as confirmed-unfixed for that reason and not because of the code (seen on a real project, 2026-11-24).
+- A runner is a command plus a file path and cannot carry environment variables. The leading assignments of the judge are handed to breakers, who must set them inside the reproducer (for a Go project, a small bash script that sets them and calls go test); a go test of a single _test.go file is not a runner. Go reproducers were the weakest part of the Go runs: the one that was run could not be confirmed offline before v0.2.3, and the fix has not been re-run on Go.
+- The confirm gate accepts a reproducer that loads the target by file path (importlib.util.spec_from_file_location) as running the project's code. The code is real, but the package's own imports are skipped.
+- A test count is the passed count, read the same way by every agent; a runner that prints only a total is counted by that total.
+- The same input can be classed differently in two runs (an unparseable timestamp was fixed-verified in one run and invalid in another), and the same break can be a lead in a lead-only run and a fix in a fixing run. Read a class as one reading.
+- A green judge covers the test command only. In the real-project runs of 2026-11-24 an independent re-check found a fix that broke a package the narrowed judge left out, a fix that failed the project's own lint step, a fix that was correct only in a function nobody calls, and a fix that changed a refusal into an acceptance on one path. Step 4 item 10 asks the session to report what the judge did not run.
 - Mutation-guided breaking (real mutants executed by a mutation tool) would give a stronger signal than model-written reproducers where a mutation tool exists. It needs different confirmation semantics (see the lens catalogue) and is not implemented.
 
 ## Editing the script
@@ -209,3 +215,17 @@ Live runs of the release candidate, checked by hand afterwards (details in learn
 | Real library | jshttp/negotiator 1.1.0, no lockfile, 366 dev packages, 1 round, cap 3 findings | 3 fixed; judge 253 to 296; independent reviewers judged 2 real defects with acceptable fixes and 1 debatable and too broad | 25 | 2.48M | 24 min |
 
 Figures are the sessions' own reports. The sandbox run was repeated on the final text with the same result. Not exercised: Go, a project with a build step, a whole-process sandbox around a live loop, and Claude Code's sandbox on Linux or Windows.
+
+### 2026-11-24 and 25, eight real projects (v0.2.2)
+
+The published v0.2.2 plugin was run in 22 headless sessions inside Claude Code's sandbox, each on a local clone with no remote, on eight projects of the maintainer: three Python, two Node (one of them this skill), one bash and two Go. Costs are the sessions' own totals and include the loop's subagents ($42.33 in all).
+
+| Outcome | Sessions |
+| --- | --- |
+| Fixes committed in the clone | 12 sessions, 20 fix commits |
+| Stopped at a red baseline, correctly | 5: nested `sandbox-exec` tests, a home-path test, a red documented gate, a suite that needs Docker, unix sockets blocked |
+| Stopped on a verifier model the account cannot use | 1, at a cost of $0.48 |
+| Lead-only or no confirmed break | 4 |
+| Second pass on a fixed branch (also counted above) | 3: one fixed a bug the first pass could not (three rejected attempts), one found low-value fault cases, one hit a false halt |
+
+Fresh agents that were told nothing of the sessions' conclusions re-checked every fix commit (judge at base and tip, regression test on the parent, diff read, extra probing): 2 sound, 15 sound with notes, 2 doubtful, 1 wrong. The wrong one was proved by a decoder that fails on an event the fix introduced, in a package the narrowed judge did not cover. What the runs exposed in the skill, fixed in v0.2.3: a plateau reported as breakers-blocked, a safety halt caused by two readings of "2038 passed, 2 skipped", fixers using git stash, a judge environment the confirmer did not have, and five small input-validation gaps in the script and the probe found by the loop on its own source. Documented but not changed: one fix per regression-test path, Go reproducers, the install scrub that drops the sandbox's proxy variables (SKILL.md now says what to pass), and sandbox allowances (see the safety runner). One model, one Mac, one maintainer's projects.
