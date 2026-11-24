@@ -4,6 +4,11 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+### Documentation
+
+- README: a first-run checklist (dynamic workflows must be on for your plan, `/sandbox`, a Python virtualenv example for `--judge` and `--repro-runner`, start lead-only); the Workflow-tool availability from Anthropic's documentation; install snippet that works for both scopes; `npx skills` pinned to the tested version and its `skills-lock.json` noted; cleanup steps for the scratch directory, the snapshot file and a dirty worktree (`git worktree remove --force`); the probe warning (do not run it by hand outside a sandbox); "Your repository", "Order of events" and the probe split into bullets; a glossary entry for the confirm gate; stale statements corrected (the v0.2.2 tag does carry the plugin manifests, and a tag-pinned install was tested).
+- Found by a first-user read of the published release. The route checks of release v0.2.2 and one fixing run of the published plugin are added to the README's evidence table, and its statements that no loop had been run through the plugin route are corrected.
+
 ## [0.2.2] - 2026-11-24
 
 ### Changed

@@ -65,7 +65,7 @@ Your own Claude Code session (the *main session*) also reads text that agents wr
 
 ## 5. Controls against OWASP's code-execution threat
 
-OWASP's *Agentic AI Threats and Mitigations* (v1.1, [genai.owasp.org](https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/)) lists threat T11, unexpected code execution, and Playbook 3 (isolated tool execution). Each control below is marked as the skill implements it, and the gaps are stated.
+OWASP's *Agentic AI Threats and Mitigations* ([genai.owasp.org](https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/)) lists threat T11, unexpected code execution, and Playbook 3 (isolated tool execution), as the v1.1 PDF of December 2025 describes them (Playbook 3 on pages 37 to 38; the landing page shows an older cover, so check the PDF you read). Each control below is marked as the skill implements it, and the gaps are stated.
 
 | Control | Status here |
 | --- | --- |
