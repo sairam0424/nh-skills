@@ -10,7 +10,7 @@ import { parseArgs } from "../nh-chaos-monkey/scripts/sandbox-probe.mjs";
 
 const PROBE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "nh-chaos-monkey", "scripts", "sandbox-probe.mjs");
 // IPv6 literals ("[::1]:80") are bad too: the host:port form splits on the first colon and never supported them.
-const BAD_NET = ["localhost", "localhost:", "localhost:abc", "localhost:0", "localhost:99999", "localhost:-1", ":443", "a:1:2", "a b:1", "[::1]:80"];
+const BAD_NET = ["localhost", "localhost:", "localhost:abc", "localhost:0", "localhost:65536", "localhost:99999", "localhost:-1", ":443", "a:1:2", "a b:1", "[::1]:80"];
 
 test("a malformed --net value is a usage error (exit 2), not a crash", (t) => {
   // A fake home keeps a regression (the probe running instead of refusing) away from the real one.

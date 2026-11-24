@@ -5,7 +5,7 @@ import { baseArgs, runLoop } from "./support/chaos-loop-harness.mjs";
 
 const finding = (n) => ({ title: "t" + n, file: "src/a.js", line: n, claim: "c" + n, severity: "medium" });
 
-// Dogfood 2026-11-25 (tracehub-mcp second pass): the verifier read "2038 passed, 2 skipped" as 2040, the
+// Dogfood 2026-11-25 (a real Python project, second pass): the verifier read "2038 passed, 2 skipped" as 2040, the
 // independent re-judge read it as 2038, and a correct fix ended in independent-rejudge-disagrees-with-verifier-claims.
 // The counts are compared with ===, so every agent that reads one must apply the same rule.
 test("the baseline, verifier and re-judge prompts carry one passed-only counting rule", async () => {
@@ -15,7 +15,9 @@ test("the baseline, verifier and re-judge prompts carry one passed-only counting
     assert.match(prompt, /Count passed tests only/, label);
     assert.match(prompt, /'2038 passed, 2 skipped' is 2038/, label);
     assert.match(prompt, /a Node summary is its pass line, not its tests total/, label);
-    assert.match(prompt, /read every count the same way/, label);
+    assert.match(prompt, /Read every count the same way/, label);
+    assert.match(prompt, /If the summary has no pass line, report its total of tests run/, label);
+    assert.match(prompt, /xfailed, xpassed and deselected tests add nothing/, label);
   }
 });
 

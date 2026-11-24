@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { baseArgs, runLoop } from "./support/chaos-loop-harness.mjs";
 
-// Dogfood 2026-11-24 (cost-guard-mcp, round 2): every breaker ran the code, fuzzed it and found nothing, and
+// Dogfood 2026-11-24 (a real Python project, round 2): every breaker ran the code, fuzzed it and found nothing, and
 // wrote "No defect found: ..." into the optional blocked field. The loop read that as "could not run the project"
 // and stopped with breakers-blocked, so a plateau was reported as "nothing was tested".
 const quietRound = (reply) => ({
@@ -25,6 +25,10 @@ test("a no-defect sentence in blocked without the flag is a plateau too", async 
     "No fault-injection defect found in sql_scope.py",
     "no bugs reproduced after 400 inputs",
     "  No issue found.",
+    "No crash found after 300 inputs",
+    "No failing input found",
+    "Nothing found",
+    "I found no defects",
   ]) {
     const { result } = await runLoop(quietRound({ candidates: [], blocked: note }));
     assert.equal(result.haltReason, "plateau", note);
@@ -37,6 +41,10 @@ test("a breaker that says the code could not run is still blocked, with or witho
     { candidates: [], blocked: "numpy cannot be imported by python3" },
     { candidates: [], blocked: "No module named 'numpy'" },
     { candidates: [], blocked: "No defect-finding is possible: pytest is missing", ranProjectCode: false },
+    { candidates: [], blocked: "No Python interpreter is available, so no bugs could be tested" },
+    { candidates: [], blocked: "No defect could be found because the module could not be imported" },
+    { candidates: [], blocked: "No module named numpy, import fails with a fault" },
+    { candidates: [], blocked: "No network or real dependency, so the faults lens cannot run the project" },
   ]) {
     const { result } = await runLoop(quietRound(reply));
     assert.match(result.haltReason, /^breakers-blocked: /, JSON.stringify(reply));
@@ -64,4 +72,22 @@ test("the breaker prompt and schema ask for ranProjectCode and say what blocked 
   assert.match(breaker.prompt, /leave blocked empty and set ranProjectCode to true/);
   assert.match(breaker.prompt, /"no defect found" never belongs in blocked/);
   assert.ok(breaker.opts.schema.properties.ranProjectCode, "the breaker schema declares ranProjectCode");
+});
+
+test("ranProjectCode false with an empty or blank blocked is blocked, with a default reason", async () => {
+  for (const reply of [
+    { candidates: [], ranProjectCode: false },
+    { candidates: [], blocked: "   ", ranProjectCode: false },
+  ]) {
+    const { result } = await runLoop(quietRound(reply));
+    assert.match(result.haltReason, /^breakers-blocked: boundaries: did not run the project's code/, JSON.stringify(reply));
+    assert.equal(result.finished, false);
+  }
+});
+
+test("a blocked note that is only whitespace or too short, without the flag, is not blocked", async () => {
+  for (const note of ["", "  ", "no"]) {
+    const { result } = await runLoop(quietRound({ candidates: [], blocked: note }));
+    assert.equal(result.haltReason, "plateau", JSON.stringify(note));
+  }
 });

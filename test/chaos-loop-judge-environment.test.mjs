@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { baseArgs, runLoop } from "./support/chaos-loop-harness.mjs";
 
-// Dogfood 2026-11-24 (toolwarrant, Go): the judge was GOCACHE=... GOMODCACHE=... GOPROXY=off go test ..., but the
+// Dogfood 2026-11-24 (a real Go project): the judge was GOCACHE=... GOMODCACHE=... GOPROXY=off go test ..., but the
 // confirmer ran the breaker's reproducer without those variables, the build failed offline, and a real lead could
 // not be confirmed.
 const breakerPrompt = (calls) => calls.find((c) => /^break:R1:/.test(c.label)).prompt;
@@ -23,6 +23,31 @@ test("a judge without assignments adds nothing", async () => {
 });
 
 test("an assignment that is not at the start of the judge is not mistaken for a prefix", async () => {
-  const { calls } = await runLoop({ args: baseArgs({ judgeCmd: "pytest -q -k FOO=bar", maxRounds: 1 }) });
-  assert.doesNotMatch(breakerPrompt(calls), /JUDGE-ENVIRONMENT/);
+  for (const judgeCmd of ["pytest -q -k FOO=bar baz", "pytest -q FOO=bar baz", "npm test -- A=1 B=2"]) {
+    const { calls } = await runLoop({ args: baseArgs({ judgeCmd, maxRounds: 1 }) });
+    assert.doesNotMatch(breakerPrompt(calls), /JUDGE-ENVIRONMENT/, judgeCmd);
+  }
+});
+
+const envBlock = (calls) => {
+  const m = /--- BEGIN JUDGE-ENVIRONMENT[^\n]*\n([\s\S]*?)\n--- END JUDGE-ENVIRONMENT ---/.exec(breakerPrompt(calls));
+  return m ? m[1] : null;
+};
+
+test("quoted and escaped values with spaces are copied whole, and a leading env is accepted", async () => {
+  for (const [judgeCmd, expected] of [
+    ['GOFLAGS="-mod=mod -tags=x" /usr/bin/go test ./...', 'GOFLAGS="-mod=mod -tags=x"'],
+    ["GOFLAGS='-mod=mod -tags=x' GOPROXY=off go test ./...", "GOFLAGS='-mod=mod -tags=x' GOPROXY=off"],
+    ["FOO=bar\\ baz npm test", "FOO=bar\\ baz"],
+    ["env GOFLAGS=-mod=mod GOPROXY=off go test ./...", "GOFLAGS=-mod=mod GOPROXY=off"],
+    ["A=b=c FOO= go test", "A=b=c FOO="],
+  ]) {
+    const { calls } = await runLoop({ args: baseArgs({ judgeCmd, maxRounds: 1 }) });
+    assert.equal(envBlock(calls), expected, judgeCmd);
+  }
+});
+
+test("an unbalanced quote at the start produces no block rather than a broken one", async () => {
+  const { calls } = await runLoop({ args: baseArgs({ judgeCmd: 'FOO="a b npm test', maxRounds: 1 }) });
+  assert.equal(envBlock(calls), null);
 });
