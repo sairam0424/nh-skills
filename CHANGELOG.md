@@ -4,6 +4,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-24
+
 ### Changed
 
 - **Behaviour change.** A break is only confirmed when the confirmer says it has read the reproducer and quotes the line that imports or runs the project's code (the script checks that the quote is present, not that it is true). A reproducer that copies, re-implements, simulates or stubs the code becomes a lead, and a behaviour that the confirmer says the project's own documents describe as accepted becomes invalid, with the document named. The finding records `runsProjectCode`, `projectCodeLine`, `documentedByDesign` and `docRef`; the last two text fields are listed in `untrustedFields`.
@@ -58,7 +60,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 - First public release, with one skill, `nh-chaos-monkey`: a loop in a git worktree on a `chaos/*` branch with breaker agents per lens, a confirmer that runs every reproducer twice, a separate fixer that adds a regression test, a fresh verifier and an independent re-run of the judge after each round that made commits.
 - A fault-injection lens that must show evidence the fault fired, a sandbox probe with a `requireSandbox` gate, a non-interactive contract for `claude -p`, caps that default low, and a validator and test harness (264 passing results in CI).
 
-[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/sairam0424/nh-skills/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/sairam0424/nh-skills/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/sairam0424/nh-skills/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sairam0424/nh-skills/releases/tag/v0.1.0
