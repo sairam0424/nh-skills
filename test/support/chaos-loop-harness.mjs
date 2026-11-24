@@ -154,6 +154,10 @@ function defaultResponse(call, world) {
       outputTail: "AssertionError",
       legit: true,
       symptomMatchesClaim: true,
+      runsProjectCode: true,
+      projectCodeLine: "import { run } from '/w/repo/src/module.js'",
+      documentedByDesign: false,
+      docRef: "",
       workdirDirty: false,
       headSha: world.head,
       reproSha: h64(m[1]),
@@ -185,6 +189,7 @@ function defaultResponse(call, world) {
       specialCased: false,
       hostileTextSeen: false,
       rootCause: true,
+      changesDocumentedBehaviour: false,
       reasons: [],
       outputTail: "pass",
     };

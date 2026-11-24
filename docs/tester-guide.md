@@ -37,7 +37,7 @@ The [tester report form](https://github.com/sairam0424/nh-skills/issues/new?temp
 | Sandbox and probe | What isolated the session (Seatbelt, a container, a VM, nothing) and the probe's verdict, with any line that surprised you |
 | Stop reason | The `haltReason` and whether `finished` was true |
 | Outside the scope | Anything that touched a place it should not have: files outside the worktree and scratch directory, your shared git state (branches, stash, hooks, config), a network connection, a credential location |
-| Findings | For each: its class, whether you judge the break real, by design or unreachable, and for a fix whether it is right, too broad or wrong |
+| Findings | For each: its class, whether its reproducer really imports or runs your code (open the file), whether you judge the break real, by design or unreachable, and for a fix whether it is right, too broad or wrong, and whether it changes behaviour your documents describe |
 | Cost | Subagent tokens, minutes, and spend if your launcher reports it |
 | Friction | Any sentence that was unclear, any step that did not match the docs, any point where you were unsure what to do |
 

@@ -37,6 +37,10 @@ A break is confirmed only when all of these hold:
 1. A reproducer exits non-zero on the current tree, in two separate runs (a flaky reproducer is a lead, not a break).
 2. The failure output shows the claimed defect, not an unrelated crash of the reproducer itself.
 3. A real caller could reach the behavior through a public entry point or documented contract (the legitimacy gate; it filters misuse and poking at private internals).
+4. The reproducer runs the project's own code: the confirmer read the file and quoted the line that imports or executes it. A script that copies, re-implements, simulates or stubs the code under test fails the same way on any code and proves nothing about the project, so it is a lead (invalid when the claim is also not reachable), never a break.
+5. The project's own documents (README, DECISIONS or ADR files, architecture notes, CHANGELOG, comments near the code) do not describe the behaviour as accepted, intended or a known limitation that was left as is, and name a file or line when they do. If one does, the finding is invalid and names the document.
+
+Items 4 and 5 are the confirmer's reading of the files. The script checks only that a quoted line (at least six characters including three consecutive letters, digits or underscores) and, for an accepted behaviour, a document reference with a file name or line number are present; the main session reads the reproducer itself in Step 4.
 
 Anything else is a lead (plausible, not proven) or invalid. Leads are reported, never fixed.
 
@@ -60,8 +64,8 @@ After each round that committed fixes, a separate agent re-runs the judge and th
 | fixed-agent-verified | Confirmed break, fix passed every check above according to the loop's agents, committed on the loop's own branch. It becomes fixed-verified only after the main session's own final checks pass |
 | confirmed-unfixed | Confirmed break, fix attempts exhausted or fixing disabled; the work of rejected attempts is kept under refs/chaos/rejected and in the git stash, which is shared with the primary checkout |
 | superseded | A break whose reproducer passed again after an earlier fix, found by a one-run recheck in the same round or by a carried-over backlog candidate that passed twice after commits; it was not fixed separately |
-| lead | Not confirmed: flaky, reachable but the failure does not match the claim, or its confirmer never answered |
-| invalid | The confirmer judged it not reachable through a public entry point or the documented contract |
+| lead | Not confirmed: flaky, reachable but the failure does not match the claim, the reproducer does not run the project's code, or its confirmer never answered |
+| invalid | The confirmer judged it not reachable through a public entry point or the documented contract, or found the project's own documents accepting the behaviour |
 
 Report all five. A report that lists only successes hides the loop's real hit rate.
 
