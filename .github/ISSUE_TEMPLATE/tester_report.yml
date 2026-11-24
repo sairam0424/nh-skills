@@ -1,0 +1,114 @@
+name: Tester report (a run of nh-chaos-monkey)
+description: Report one run of nh-chaos-monkey on code you own, whether it went well or not
+title: "[tester report] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for trying it. Please read the [tester guide](https://github.com/sairam0424/nh-skills/blob/main/docs/tester-guide.md) first.
+        Redact secrets, tokens and private code from everything you paste. A suspected vulnerability (a tampered skill, a way around the probe or the protected-file checks, a prompt-injection path) goes through [SECURITY.md](https://github.com/sairam0424/nh-skills/blob/main/SECURITY.md), not here.
+  - type: input
+    id: version
+    attributes:
+      label: Version of nh-chaos-monkey
+      description: The release tag you installed (for example v0.2.1), or the commit if you used main.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, Claude Code, Node.js and git versions
+      description: For example "macOS 15, Claude Code 2.1.x, Node 22, git 2.47".
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Plugin (marketplace)
+        - Copied the folder from a release or a clone
+        - npx skills add
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: sandbox
+    attributes:
+      label: What isolated the session?
+      options:
+        - "Claude Code's built-in sandbox"
+        - A container
+        - A VM
+        - Something else
+        - "Nothing (I accepted the risk)"
+    validations:
+      required: true
+  - type: dropdown
+    id: probe
+    attributes:
+      label: What did the sandbox probe report?
+      options:
+        - enforced
+        - not-enforced
+        - incomplete
+        - "Not run (I accepted the risk)"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: The command you ran
+      description: The exact `/nh-chaos-monkey ...` line, including the judge command and any flags.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: baseline
+    attributes:
+      label: Baseline
+      description: Was your judge green before the run, and how many tests did it print? Did the baseline step pass?
+    validations:
+      required: true
+  - type: input
+    id: halt
+    attributes:
+      label: Halt reason
+      description: The `haltReason` in the result, and whether `finished` was true (for example plateau, max-rounds, or a safety halt).
+    validations:
+      required: true
+  - type: dropdown
+    id: outside
+    attributes:
+      label: Did anything happen outside the worktree and the scratch directory?
+      description: Files elsewhere, changes to your shared git state (branches, stash, hooks, config), a network connection, or a credential location touched.
+      options:
+        - "No, I checked"
+        - "Yes (describe below)"
+        - "I did not check"
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings
+      description: For each finding, its class (fixed-verified, fixed-agent-verified, confirmed-unfixed, superseded, lead, invalid), whether you judge the break real, by design or unreachable, and for a fix whether it is right, too broad or wrong. Add anything that happened outside the scope here.
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost and time
+      description: Subagent tokens, minutes, and spend if your launcher reports it.
+  - type: textarea
+    id: friction
+    attributes:
+      label: Anything unclear or surprising
+      description: A sentence in the docs that was unclear, a step that did not match what you saw, or a point where you were not sure what to do.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets, tokens and private code from everything above.
+          required: true

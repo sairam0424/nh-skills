@@ -27,6 +27,9 @@ that.
 
 - Install, quick start, safety and cost of `nh-chaos-monkey`: `README.md`
   (repo root) and `nh-chaos-monkey/SKILL.md`
+- A stopped run, a refused step, or a common question: `docs/troubleshooting.md`;
+  the threat model: `docs/safety.md`; running it as a tester: `docs/tester-guide.md`
+- What changed between versions: `CHANGELOG.md`
 - Project overview and current state: `status.md` (this repo, root)
 - Architecture and process decisions: `decisions.md` and `docs/adr/`
   (this repo, root)

@@ -122,9 +122,10 @@ tampered, or unsafe to run:
    a second maintainer.
 
 There is no automated kill-switch for already-copied skills (this is a
-Markdown-file distribution model, not a package registry with a revoke
-API) — takedown here means "stop distributing the bad version and tell
-people," not "reach into their `~/.claude/skills/`."
+Markdown-file distribution model with a plain marketplace file, not a
+package registry with a revoke API) — takedown here means "stop
+distributing the bad version and tell people," not "reach into their
+`~/.claude/skills/`."
 
 ### Prompt-injection risk in skill bodies
 
@@ -195,7 +196,9 @@ reporter asks to remain anonymous.
 - The GitHub Actions workflows in `.github/` (the validate and secret-scan
   jobs).
 - Repository metadata that affects trust (LICENSE, this file, `SUPPORT.md`,
-  `decisions.md`).
+  `decisions.md`) and the Claude Code plugin manifests that control what the
+  plugin route installs (`.claude-plugin/marketplace.json` and
+  `nh-chaos-monkey/.claude-plugin/plugin.json`).
 
 **Out of scope:**
 
@@ -224,9 +227,17 @@ reporter asks to remain anonymous.
   job only validates `SKILL.md` frontmatter and structure, not the semantics
   of bundled scripts. Run `nh-chaos-monkey` inside the sandbox described in
   the root `README.md` and in `nh-chaos-monkey/references/safety-runner.md`.
-- **Distribution is copy-based, not registry-based.** There is no revoke
-  API once someone has `cp -r`'d a skill onto their machine — see the
-  Takedown section above.
+- **Release tags are unsigned and releases carry no provenance
+  attestation.** The tags are lightweight tags. Each release attaches an
+  archive and its SHA-256, which shows the archive matches what was
+  published beside it, not who published it. Squash-merge commits on `main`
+  carry GitHub's signature, which shows GitHub made the merge, not who wrote
+  the code.
+- **Distribution is by copy or through this repository's own Claude Code
+  marketplace.** Copying (`cp -r`, the `skills` CLI) leaves no revoke API
+  once someone has a skill on their machine, and removing the entry from
+  `.claude-plugin/marketplace.json` only delists it for new plugin installs
+  — see the Takedown section above.
 - **The validator is a lint gate, not a security scanner.** It hard-fails
   on structural/schema problems (frontmatter shape, name/description rules,
   duplicate names, dead file references) and soft-warns on style issues.

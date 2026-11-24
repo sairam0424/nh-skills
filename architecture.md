@@ -54,7 +54,7 @@ Not-Humans-Lab).
   the CI check that runs the validator rules on PRs and pushes to main that
   touch a SKILL.md, scripts, references, tests, fixtures or the package files.
 - **Out of scope for nh-skills itself**: packaging/distribution tooling
-  beyond correct directory layout, a manifest file, a dedicated test
+  beyond correct directory layout and the two Claude Code plugin manifests, a manifest file of its own, a dedicated test
   framework, and anything belonging to nh-deck or daily-dose.
 
 ## Building Block View

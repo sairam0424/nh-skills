@@ -14,7 +14,7 @@ nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live Gi
 - **Tech stack: decided.** Pure Markdown + YAML frontmatter for skill artifacts — zero runtime (the exception is the code bundled with `nh-chaos-monkey`: `chaos-loop.js`, a script written to run inside the Claude Code Workflow tool, and `sandbox-probe.mjs`, a plain Node CLI the skill runs as a safety check). Exactly one lightweight layer on top: `scripts/validate-skills.mjs` (one devDependency, `js-yaml`), run in CI by the `validate-skills.yml` job (`AGENTS.md` lists the whole CI set-up).
 - **Loop proven twice, then reset on 2026-11-02**: `nh-commit` (PR #1) and `nh-style-markdown` (PR #2) went through the full author → lint → CI → merge loop and were then removed to start fresh. `nh-chaos-monkey` is the only skill now.
 - **Only skill: `nh-chaos-monkey`** (merged via PR #4 as `nh-breaker`; renamed on 2026-11-08, so PRs #4 to #12 and the older history use the old name). It is the first skill with a bundled `scripts/` file (a Claude Code Workflow script) and `references/`, and the first to go through the `AGENTS.md` security-review step: an independent read-only reviewer, three rounds, findings fixed before this was proposed. Its design and validation history are in `nh-chaos-monkey/references/loop-design.md`. Since the rename it gained a deterministic test harness, a fifth default lens (faults), a sandbox probe and gate, a tested git-state snapshot command and a `learning.md` journal of A/B and verification runs (PRs #16 to #22; #14 and #15 were closed in favour of #16).
-- **No packaging/distribution tooling exists or is planned** beyond correct directory layout (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
+- **No packaging/distribution tooling exists or is planned** beyond correct directory layout and the two Claude Code plugin manifests (`decisions.md`, 2026-11-24) (`<skill-name>/SKILL.md` plus optional `scripts/`, `references/`, `assets/`). `npx skills add` and manual `cp -r` into `~/.claude/skills/` already work off directory structure alone — no manifest file is needed.
 - **No dedicated test framework.** `npm test` (`node --test`) runs Node's built-in `node:test` over 23 `*.test.mjs` files plus the two helper modules in `test/support/`, which the runner loads too (307 passing results on the v0.2.1 branch, 2026-11-23, each helper file counting once; no Jest/Vitest/pytest): the validator's fixture-based self-tests and, since PR #16, a deterministic harness that runs the real `chaos-loop.js` against scripted fake agents, plus tests for the sandbox probe and the git-state snapshot command. The tests that need macOS Seatbelt skip themselves on other platforms, so CI on Linux runs the rest.
 - **License: Apache-2.0**, decided once at the Not-Humans-Lab system level and applied identically across all three sibling projects for enterprise-clearable, patent-safe consistency (see `../Not-Humans-Lab/decisions.md`).
 
@@ -25,7 +25,7 @@ Two layers only:
 1. **The skill artifacts** — `<skill-name>/SKILL.md` (+ optional `scripts/`, `references/`, `assets/`), no runtime of its own, installable by directory structure alone.
 2. **The validator** — `scripts/validate-skills.mjs`, a single dependency-light Node script that lints every `SKILL.md`'s frontmatter schema and structural conventions, wired into CI by the `validate-skills.yml` GitHub Actions job.
 
-No manifest, no packaging step, no build. See `AGENTS.md`'s Directory Map for the concrete file layout. See `../Not-Humans-Lab/architecture.md` for how nh-skills fits into the three-project system (C4 Level 1 only — this repo owns its own internals).
+No manifest of the repository's own, no packaging step, no build (except the two Claude Code plugin manifests (see `decisions.md`, 2026-11-24)). See `AGENTS.md`'s Directory Map for the concrete file layout. See `../Not-Humans-Lab/architecture.md` for how nh-skills fits into the three-project system (C4 Level 1 only — this repo owns its own internals).
 
 ## Key decisions & why
 
@@ -56,7 +56,7 @@ Proposed on 2026-11-23 and recorded here so the bar does not move. Status as of 
 | One non-JavaScript live run on the current version | Met (2026-11-23: a Python fixture) |
 | A fixing run on a real library, with the fixes judged independently | Met once (negotiator: 2 of 3 fixes real, 1 debatable); more than one library would be stronger |
 | Community files (contributing guide, issue and PR templates, code of conduct) | Met |
-| At least two outside runs, reported through the issue form, with no skill-level defect | Not met: there are no outside runs yet |
+| At least two outside runs, reported through the issue form (`.github/ISSUE_TEMPLATE/tester_report.yml`), with no skill-level defect | Not met: there are no outside runs yet |
 
 ## Open risks
 
