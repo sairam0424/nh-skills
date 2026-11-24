@@ -89,10 +89,9 @@ if (!absOk(A.workdir) || !absOk(A.scratch))
   argError(
     "workdir and scratch must be absolute paths made of letters, digits and ._/- only",
   );
-if (
-  (A.workdir + "/").startsWith(A.scratch + "/") ||
-  (A.scratch + "/").startsWith(A.workdir + "/")
-)
+const workdirDir = A.workdir.replace(/\/+$/, "") + "/";
+const scratchDir = A.scratch.replace(/\/+$/, "") + "/";
+if (workdirDir.startsWith(scratchDir) || scratchDir.startsWith(workdirDir))
   argError("workdir and scratch must be separate directories");
 if (/[\n\r]/.test(A.target) || CONTROL_CHARS.test(A.judgeCmd))
   argError("target and judgeCmd must be single-line");
@@ -131,11 +130,19 @@ const NOT_A_TEST =
   /(^|\/)\.|(^|\/)(conftest\.py|(jest|vitest|playwright|cypress|babel|eslint)\.config\.[^\/]*|tsconfig[^\/]*\.json)$|\/fixtures?\//;
 
 const lensesIn = A.lenses !== undefined ? A.lenses : DEFAULT_LENSES;
+if (
+  lensesIn.some(
+    (l) => l === null || typeof l !== "object" || Array.isArray(l) || typeof l.key !== "string",
+  )
+)
+  argError("each lens must be an object with a string key");
 const lenses = lensesIn
   .slice(0, 6)
   .map((l) => ({ key: String(l.key), brief: clean(l.brief, 600) }));
 if (lenses.some((l) => !/^[a-z0-9-]{1,24}$/.test(l.key)))
   argError("lens keys must match [a-z0-9-]{1,24}");
+if (new Set(lenses.map((l) => l.key)).size !== lenses.length)
+  argError("lens keys must be unique");
 const protectedPaths = [
   ...new Set([
     ...(A.replaceProtectedDefaults === true ? [] : DEFAULT_PROTECTED),

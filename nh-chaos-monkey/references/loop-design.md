@@ -58,7 +58,7 @@ The script refuses unknown argument names and wrong types, and the result's sett
 | target | required | What to attack, reduced to a safe character set |
 | protectedPaths | built-in set | Pathspecs added to the built-in protected set (listed as DEFAULT_PROTECTED in scripts/chaos-loop.js; the judge protocol says what it covers and what it leaves out) |
 | replaceProtectedDefaults | false | true makes protectedPaths the whole set; needs protectedPaths |
-| lenses | five defaults | Up to six {key, brief} entries; briefs are trimmed to 600 characters; extra lenses are not run and the log says which |
+| lenses | five defaults | Up to six {key, brief} entries, each an object with a string key matching `[a-z0-9-]{1,24}`; keys must be unique (two lenses with the same key would share one scratch directory); every entry is checked, including the ones past the sixth that are not run; briefs are trimmed to 600 characters; extra lenses are not run and the log says which |
 | reproRunners | node, node --test, python3, python, pytest, bash, sh, ruby, deno run, bun, go run, php | The only commands a reproducer may start with. An entry is a command name with plain arguments, or a plain absolute interpreter path (a virtualenv outside the worktree) with the same arguments; it may not contain .. or doubled slashes or lie inside the scratch directory or the worktree. Passing the argument replaces the defaults |
 | maxRounds, maxFindingsPerRound, maxFixAttempts, plateauRounds, maxPerFile | 3 (1 to 6), 6 (1 to 10), 3 (1 to 5), 1 (1 to 4), 2 (1 to 10) | The caps |
 | fixEnabled | true | false is lead-only mode |
