@@ -99,7 +99,13 @@ export function probeCredentialReads(home, fsImpl = fs) {
       if (REFUSAL_CODES.has(e.code)) refused.push(rel);
       else undecided.push(rel + " (" + String(e.code || e.message) + ")");
     } finally {
-      if (fd !== undefined) fsImpl.closeSync(fd);
+      if (fd !== undefined) {
+        try {
+          fsImpl.closeSync(fd);
+        } catch (e) {
+          undecided.push(rel + " (close failed: " + String(e.code || e.message) + ")");
+        }
+      }
     }
   }
   if (readable.length) return verdict("read-credentials", "allowed", "openable: " + readable.join(", "));
@@ -209,7 +215,7 @@ export async function runProbes({ workdir, scratch, net: target = "1.1.1.1:443",
   return { verdict: allowed.length ? "not-enforced" : unresolved.length ? "incomplete" : "enforced", allowed, unresolved, probes };
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const out = { json: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--json") out.json = true;
@@ -217,7 +223,12 @@ function parseArgs(argv) {
     else return null;
   }
   const absolute = (p) => typeof p === "string" && path.isAbsolute(p);
-  return absolute(out.workdir) && absolute(out.scratch) ? out : null;
+  const validNet = (n) => {
+    if (!Object.hasOwn(out, "net")) return true; // a dangling --net has no value and is a usage error
+    const m = /^[^:\s]+:(\d+)$/.exec(String(n));
+    return m !== null && Number(m[1]) >= 1 && Number(m[1]) <= 65535;
+  };
+  return absolute(out.workdir) && absolute(out.scratch) && validNet(out.net) ? out : null;
 }
 
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
