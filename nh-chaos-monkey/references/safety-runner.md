@@ -61,7 +61,7 @@ Settings, passed with `--settings` (the paths are examples):
 }
 ```
 
-The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings below are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The 22 sessions of 2026-11-24 and 25 denied reads of the 15 roots the probe opens plus `~/.claude.json` and `~/.claude/settings.json`; the extra credential files named in this paragraph were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
+The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings in the example above are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The 22 sessions of 2026-11-24 and 25 denied reads of the folders and files that hold the 15 locations the probe opens (13 roots) plus `~/.claude.json` and `~/.claude/settings.json`; the extra credential files named in this paragraph were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
 
 How it was run:
 
@@ -76,7 +76,7 @@ Limits: the dependency install cannot run inside it because there is no network.
 
 ## What a project may need allowed inside the sandbox
 
-A run in this sandbox stops at the baseline when the project's own tests need something the sandbox refuses. The stop is correct and leaves behind a worktree, a branch, a scratch directory and a snapshot file of your git state (nothing is merged or pushed), but it does not say what to allow. These are the cases seen when the published v0.2.2 plugin was run on eight real projects (22 headless sessions, 2026-11-24, Claude Code 2.1.331, macOS), with what made each work. Grant the least that works, in the settings file, and say so in the report. None of this is a guarantee for your project.
+A run in this sandbox stops at the baseline when the project's own tests need something the sandbox refuses. The stop is correct and leaves behind a worktree, a branch, a scratch directory and a snapshot file of your git state (nothing is merged or pushed), but it does not say what to allow. These are the cases seen when the published v0.2.2 plugin was run on eight real projects (22 headless sessions, 2026-11-24, Claude Code 2.1.331, macOS), with what made each work. The raw session records behind these rows are kept by the maintainer and are not in this repository. Grant the least that works, in the settings file, and say so in the report. None of this is a guarantee for your project.
 
 | What the tests need | What was seen | What allowed it |
 | --- | --- | --- |
@@ -88,6 +88,28 @@ A run in this sandbox stops at the baseline when the project's own tests need so
 | Docker or testcontainers | 8 to 9 packages red offline | Do not give the sandbox the Docker socket: it is root on the host. If the project documents no subset without Docker, the loop correctly has no judge |
 | An offline toolchain | Go builds fail without a cache, Python imports fail without the dependencies, Node tests fail without `node_modules` | Go: `GOCACHE=<scratch>/gocache GOMODCACHE=<pre-filled> GOFLAGS=-mod=readonly GOPROXY=off` in front of the judge (breakers copy those assignments into their reproducers); Python: a virtualenv outside the clone and `--repro-runner <venv>/bin/python`; Node: `node_modules` in a parent directory of the worktree. Keep pre-filled caches and virtualenvs read-only for the session and do not share a writable one between concurrent runs |
 | `--allow-install` | `npm ci` failed with ENOTFOUND under `env -i` | List only the registry host in `allowedDomains` and pass the sandbox's proxy variables through the scrub (SKILL.md, Step 2 item 6). One run did this and installed 7 packages from the lockfile; the host stays reachable until the session ends |
+
+### One settings file for a Python project that needs loopback and a unix socket
+
+The tested form is a headless session started with `--settings <file> --setting-sources project,local`; an interactive session would put the same keys in `.claude/settings.local.json`, which was not tried. Claude Code's sandbox does not deny credential reads by itself, so without the `denyRead` list the probe finds the credential files readable and the skill stops. Create the three directories first and empty, because the skill otherwise picks names the sandbox would not let it write to: a worktree directory, a scratch directory and a short folder for sockets, all outside your home directory if a test rejects home paths.
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d"],
+      "allowWrite": ["/private/tmp/nh-wt", "/private/tmp/nh-scratch", "/private/tmp/nh-sock", "/path/to/clone/.git"],
+      "denyWrite": ["/path/to/clone/.git/hooks", "/path/to/clone/.git/config"]
+    },
+    "network": { "allowedDomains": [], "allowLocalBinding": true, "allowUnixSockets": ["/private/tmp/nh-sock"] }
+  }
+}
+```
+
+Then give the session these as your answers to Step 1, in the prompt: the worktree directory, the scratch directory, the judge (for example `TMPDIR=/private/tmp/nh-sock PYTHONPATH=src /path/to/venv/bin/python -m pytest -q`) and `--repro-runner /path/to/venv/bin/python`. Folders below an allowed socket folder are covered: the Go run that worked created its sockets in temporary folders below it.
 
 ## The preflight probe
 

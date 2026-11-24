@@ -29,6 +29,11 @@ test("a no-defect sentence in blocked without the flag is a plateau too", async 
     "No failing input found",
     "Nothing found",
     "I found no defects",
+    "Found no defects after 300 inputs",
+    "NO DEFECT FOUND",
+    "No new defect found",
+    "No defects found; imports and tests passed",
+    "No defect found: the module imports cleanly and 400 inputs ran",
   ]) {
     const { result } = await runLoop(quietRound({ candidates: [], blocked: note }));
     assert.equal(result.haltReason, "plateau", note);
@@ -45,6 +50,15 @@ test("a breaker that says the code could not run is still blocked, with or witho
     { candidates: [], blocked: "No defect could be found because the module could not be imported" },
     { candidates: [], blocked: "No module named numpy, import fails with a fault" },
     { candidates: [], blocked: "No usable test runner is configured for defects" },
+    // the fallback errs toward blocked: it reads the raw note, so contractions and curly apostrophes still count
+    { candidates: [], blocked: "No defects found; pytest can't start" },
+    { candidates: [], blocked: "No bugs found because the tests couldn\u2019t run" },
+    { candidates: [], blocked: "No defects found: can't execute project CLI" },
+    { candidates: [], blocked: "No defect found, but I couldn't import numpy" },
+    { candidates: [], blocked: "No defect found; the module failed to load" },
+    { candidates: [], blocked: "No defect found; ModuleNotFoundError: numpy" },
+    { candidates: [], blocked: "No bugs because python3 is not on the PATH" },
+    { candidates: [], blocked: "No defect found; the package could not be built" },
     { candidates: [], blocked: "No network or real dependency, so the faults lens cannot run the project" },
   ]) {
     const { result } = await runLoop(quietRound(reply));
@@ -91,4 +105,13 @@ test("a blocked note that is only whitespace or too short, without the flag, is 
     const { result } = await runLoop(quietRound({ candidates: [], blocked: note }));
     assert.equal(result.haltReason, "plateau", JSON.stringify(note));
   }
+});
+
+test("the breaker prompt defines ran the project's code and the halt text names the part that was not tested", async () => {
+  const { calls } = await runLoop({ args: baseArgs({ fixEnabled: false, maxRounds: 1 }) });
+  const breaker = calls.find((c) => /^break:/.test(c.label)).prompt;
+  assert.match(breaker, /true means at least one reproducer or probe of yours imported or executed the project's code and ran to completion/);
+  assert.match(breaker, /if every attempt died on an import or setup error, it is false/);
+  const { result } = await runLoop(quietRound({ candidates: [], blocked: "numpy cannot be imported", ranProjectCode: false }));
+  assert.match(result.haltReason, /no lens produced a candidate and at least one could not run the project's code with the allowed runners, so that part was not tested/);
 });

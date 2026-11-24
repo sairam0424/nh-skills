@@ -20,6 +20,8 @@ test("the fixer prompt shows how to see a test fail on the old code without touc
   assert.match(fixer, /Do not undo your own change in '\/w\/repo' to see the test fail/);
   assert.match(fixer, /never use git stash or any other command that changes the stash, the refs or the index/);
   assert.match(fixer, /those are shared with the user's checkout/);
+  assert.match(fixer, /a plain export has no gitignored dependency folders/);
+  assert.match(fixer, /Work only inside '\/w\/repo' \(plus the export in '\/w\/scratch' that rule 2 allows\); never write in any other directory/);
 });
 
 test("the fixer prompt prefers a new test file over a change to a protected one", async () => {

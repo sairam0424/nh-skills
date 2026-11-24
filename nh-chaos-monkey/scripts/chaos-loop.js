@@ -58,17 +58,26 @@ const JUDGE_BAD =
 // python -c or a test script that masks failures internally pass it, so the baseline count gate and
 // the main session's own re-run stay the real checks.
 const JUDGE_BAD_MORE =
-  /(^|&&|\(|\btime\b)\s*!(\s|$)|(^|&&|\(|\btime\b)\s*(exit|exec|command\s+exit|builtin\s+exit)(\s|&|$)|(^|&&\s*|\(\s*)eval\b|(^|\s)\$'|\$\(|<\(|`|(^|[\s/])(ba|z|da|k)?sh\s+((-o\s+\w+|-[\w-]+)\s+)*-[A-Za-z]*c[A-Za-z]*\b|>(?!=|&\d(\s|$))|(^|\s)(--collect-only|--co|--no-run|--dry-run|--list|--listTests|--list-tests|-list)(=|\s|$)|(^|\s)#|JUDGE-COMMAND/;
+  /(^|&&|\(|\btime\b)\s*!(\s|$)|(^|&&|\(|\btime\b)\s*(exit|exec|command\s+exit|builtin\s+exit)(\s|&|$)|(^|&&\s*|\(\s*)eval\b|(^|\s)\$'|\$\(|<\(|`|(^|[\s/])(ba|z|da|k)?sh\s+((-o\s+\w+|-[\w-]+)\s+)*-[A-Za-z]*c[A-Za-z]*\b|>(?!=|&\d(\s|$))|(^|\s)(--collect-only|--co|--no-run|--dry-run|--list|--listTests|--list-tests|-list)(=|\s|$)|(^|\s)#|JUDGE-COMMAND|JUDGE-ENVIRONMENT/;
 // A breaker that ran the code and found nothing sometimes writes that into blocked. Such a sentence ("No defect found:
 // ...") is not a blocked lens, unless it also says the code could not run. The flag ranProjectCode decides first.
 const NO_FINDING_NOTE =
-  /^\s*(?:no\s+(?:[\w-]+\s+){0,3}?(?:defects?|bugs?|breaks?|issues?|faults?|findings?|crash(?:es)?|failures?|failing|problems?)\b|(?:nothing|none)\b[^:.;]{0,30}\b(?:found|to report|failed|broke)\b|i\s+(?:found|saw|observed)\s+(?:no|nothing)\b)/i;
-const COULD_NOT_RUN = /\b(?:cannot|can't|could not|couldn't|unable|missing|not found|not installed|unavailable|import(?:able|s)?|no module|fails? to)\b/i;
+  /^\s*(?:no\s+(?:[\w-]+\s+){0,3}?(?:defects?|bugs?|breaks?|issues?|faults?|findings?|crash(?:es)?|failures?|failing|problems?)\b|(?:nothing|none)\b[^:.;]{0,30}\b(?:found|to report|failed|broke)\b|(?:i\s+)?(?:found|saw|observed)\s+(?:no|nothing)\b)/i;
+// Phrases that say the code did not run. Checked on the raw note, before clean() turns an apostrophe into a space. The
+// fallback errs toward blocked: a halt is visible, while a plateau reported for code that never ran hides an untested round.
+const COULD_NOT_RUN_PHRASES = [
+  "cannot", "can't", "can\u2019t", "can not", "could not", "couldn't", "couldn\u2019t", "unable", "failed to", "fails to", "fail to",
+  "not installed", "not found", "not available", "not on the path", "missing", "unavailable", "no module", "importerror",
+  "modulenotfounderror", "import error", "import failure", "import failed", "no such file", "permission denied",
+];
 function lensIsBlocked(r) {
   if (r.ranProjectCode === true) return false;
   if (r.ranProjectCode === false) return true; // the breaker says the code did not run, even with an empty reason
-  const note = clean(r.blocked, 300);
-  return note.length >= 3 && !(NO_FINDING_NOTE.test(note) && !COULD_NOT_RUN.test(note));
+  const raw = typeof r.blocked === "string" ? r.blocked.slice(0, 300) : "";
+  if (clean(raw, 300).length < 3) return false;
+  const lower = raw.toLowerCase();
+  const quiet = NO_FINDING_NOTE.test(raw) && !COULD_NOT_RUN_PHRASES.some((phrase) => lower.includes(phrase));
+  return !quiet;
 }
 // Control, format (zero width, bidirectional, tag), line-separator and filler characters and variation selectors, but not a tab, so what you confirm is what runs.
 const CONTROL_CHARS = /(?!\t)[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\u115f\u1160\u3164\uffa0\ufe00-\ufe0f]/u;
@@ -278,8 +287,8 @@ const JUDGE_BLOCK =
   "\n--- END JUDGE-COMMAND ---";
 // Leading VAR=value words of the judge command. The confirmer and the verifier run a reproducer without them, so a
 // breaker that needs the same variables (an offline Go cache, a module path) has to set them inside the reproducer.
-const ENV_ASSIGNMENT = String.raw`[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|\\.|[^\s"'\\])*`;
-const JUDGE_ENV = (C.judgeCmd.match(new RegExp("^(?:env\\s+)?(?:" + ENV_ASSIGNMENT + "\\s+)+")) || [""])[0]
+const ENV_ASSIGNMENT = String.raw`[A-Za-z_][A-Za-z0-9_]*=(?:"(?:[^"\\]|\\.)*"|'[^']*'|\\.|[^ \t"'\\])*`;
+const JUDGE_ENV = (C.judgeCmd.match(new RegExp("^(?:env[ \\t]+)?(?:" + ENV_ASSIGNMENT + "[ \\t]+)+")) || [""])[0]
   .trim()
   .replace(/^env\s+/, "");
 const judgeEnvBlock = () =>
@@ -396,7 +405,7 @@ Return exit1, exit2, outputTail (first run, at most 15 lines), legit, symptomMat
 const fixerPrompt = (f, failures) => `FIXER for ${f.id}.
 ${fence("FINDING", { id: f.id, title: f.title, claim: f.claim, file: f.file, line: f.line })}
 Reproducer (read-only for you): ${f.reproFile}, run with: ${f.reproCmd} (it currently fails with exit ${f.exit1}).
-Work only inside ${q(C.workdir)}; never write in any other directory. A separate verifier checks every rule below with commands, and a violation voids your fix:
+Work only inside ${q(C.workdir)} (plus the export in ${q(C.scratch)} that rule 2 allows); never write in any other directory. A separate verifier checks every rule below with commands, and a violation voids your fix:
 1. Fix the root cause with the smallest change to non-protected files. Never special-case the reproducer's inputs or hardcode expected values.
 2. Add a regression test in the project's own test location and style (mirror an existing test) that exercises the scenario through the public entry point. It must fail on the code as it is now, pass after your change, and be runnable on its own. Prefer a NEW test file over adding to an existing one: a modified existing test file that is protected (every test directory is, by default) voids the fix. To see the test fail on the old code, export HEAD with git archive into a new directory under ${q(C.scratch)} (the one place besides ${q(C.workdir)} where you may create files; a plain export has no gitignored dependency folders, so link the ones the test needs into it), put the test there and run it there. Do not undo your own change in ${q(C.workdir)} to see the test fail, and never use git stash or any other command that changes the stash, the refs or the index: those are shared with the user's checkout. Keep it self-contained: inline its data and do not add snapshot, golden or fixture files, because new files under protected paths fail verification.
 3. Do not edit, delete, skip or loosen any existing test, fixture, snapshot, lint, type or CI config, lockfile or manifest, and do not touch the reproducer. Do not edit the project's documents (README, DECISIONS, ADR or architecture files, CHANGELOG, docs/): later confirmers read them to learn what the project accepts.
@@ -773,7 +782,7 @@ async function run() {
     log(
       lensesIn.length - lenses.length +
         " lens(es) beyond the limit of 6 were not run: " +
-        lensesIn.slice(6).map((l) => String(l.key)).join(", "),
+        lensesIn.slice(6).map((l) => clean(l.key, 24)).join(", "),
     );
   const iso = await agent(PRE + isolationPrompt(), {
     label: "isolation",
