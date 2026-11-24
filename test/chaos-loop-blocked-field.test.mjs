@@ -22,7 +22,7 @@ test("breakers that ran the code and say so are a plateau, not a blocked run", a
 test("a no-defect sentence in blocked without the flag is a plateau too", async () => {
   for (const note of [
     "No defect found: the nesting check uses a close+1 bound",
-    "No fault-injection defect found in sql_scope.py",
+    "No fault-injection defect found in parser.py",
     "no bugs reproduced after 400 inputs",
     "  No issue found.",
     "No crash found after 300 inputs",
