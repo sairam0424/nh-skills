@@ -93,16 +93,16 @@ The result's `finished` and `haltReason` fields say whether it stopped normally.
 
 | Class | Meaning |
 | --- | --- |
-| `fixed-agent-verified` | Two failing reproducer runs, a fix that passed the loop's checks, committed on the branch. Not yet proven |
+| `fixed-agent-verified` | Two failing runs of a reproducer that the confirmer says runs your code, a fix that passed the loop's checks, committed on the branch. Not yet proven |
 | fixed-verified | The word your own session uses only after it re-ran the judge, the diff and git-state checks, the reproducer on the fixed head, and the regression test on the tree just before the fix. It means a session checked it, not that a human reviewed it |
-| `confirmed-unfixed` | The loop's agents saw the reproducer fail twice; no fix was achieved. Check that the reproducer runs your project's code before you believe it |
+| `confirmed-unfixed` | The loop's agents saw the reproducer fail twice and the confirmer says it runs your project's code; no fix was achieved. Treat it as a lead until your session has read the reproducer too (Step 4 item 8), and even then not as a real break |
 | `superseded` | The reproducer passed again after an earlier fix |
-| `lead` | Plausible but not confirmed |
-| `invalid` | The confirmer judged it not reachable through a public entry point or the documented contract |
+| `lead` | Plausible but not confirmed: flaky, a failure that does not match the claim, a reproducer that does not run your project's code, or a confirmer that never answered |
+| `invalid` | The confirmer judged it not reachable through a public entry point or the documented contract, or found your own documents accepting the behaviour (the finding names them) |
 
 A stop on `plateau` means no further break was found within the caps, by these lenses, with this judge. It is not a pass, and the skill's instructions forbid it from writing "resilient", "robust", "secure" or "production-ready". A silent agent is not a clean result: the report lists which lenses answered.
 
-**A confirmed break proves a behaviour, not that your documentation forbids it.** In the one lead-only run on unplanted bugs, independent AI reviewers judged 2 of 4 confirmed breaks to be by design or unreachable. Read each against the module's own contract before acting.
+**A confirmed break proves a behaviour, not that your documentation forbids it.** In the one lead-only run on unplanted bugs, independent AI reviewers judged 2 of 4 confirmed breaks to be by design or unreachable. Read each against the module's own contract before acting. A run on a mature real project (2026-11-24, before the confirm gate) also showed that a failing script is not evidence unless it runs your code: five of six "confirmed" reproducers tested a copy, a re-write or a simulation. The confirmer now has to quote the line that runs your code and to say whether your documents accept the behaviour, but that is an agent's reading of the file; your session reads the reproducer of every unfixed, fixed or lead finding in Step 4, and so should you.
 
 ## 8. Limitations and what it does not do
 
