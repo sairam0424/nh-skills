@@ -102,8 +102,8 @@ if (!absOk(A.workdir) || !absOk(A.scratch))
   );
 A.workdir = A.workdir.replace(/\/+$/, "") || "/";
 A.scratch = A.scratch.replace(/\/+$/, "") || "/";
-const workdirDir = A.workdir.replace(/\/+$/, "") + "/";
-const scratchDir = A.scratch.replace(/\/+$/, "") + "/";
+const workdirDir = A.workdir + "/";
+const scratchDir = A.scratch + "/";
 if (workdirDir.startsWith(scratchDir) || scratchDir.startsWith(workdirDir))
   argError("workdir and scratch must be separate directories");
 if (/[\n\r]/.test(A.target) || CONTROL_CHARS.test(A.judgeCmd))

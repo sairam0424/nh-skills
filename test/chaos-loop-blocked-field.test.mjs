@@ -44,6 +44,7 @@ test("a breaker that says the code could not run is still blocked, with or witho
     { candidates: [], blocked: "No Python interpreter is available, so no bugs could be tested" },
     { candidates: [], blocked: "No defect could be found because the module could not be imported" },
     { candidates: [], blocked: "No module named numpy, import fails with a fault" },
+    { candidates: [], blocked: "No usable test runner is configured for defects" },
     { candidates: [], blocked: "No network or real dependency, so the faults lens cannot run the project" },
   ]) {
     const { result } = await runLoop(quietRound(reply));
