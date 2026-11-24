@@ -51,7 +51,7 @@ Proposed on 2026-11-23 and recorded here so the bar does not move. Status as of 
 
 | Criterion | Status |
 | --- | --- |
-| No open medium finding in issue #25 | Partly: the run order is fixed and tested, and v0.2.1 widens the protected set and the probe's credential locations (15); setups with nested CI or config files, other ecosystems' install-time code and the git-lfs stop in non-interactive runs remain, and are documented in the README |
+| No open medium finding in issue #25 | Partly: the run order is fixed and tested, and v0.2.1 widens the protected set and the probe's credential locations (15); setups with nested CI or config files, other ecosystems' install-time code and the stop on husky's `core.hooksPath` in non-interactive runs remain (the standard git-lfs lines no longer stop a run), and are documented in the README |
 | One recorded live run inside an OS sandbox | Met (2026-11-23: Claude Code's built-in sandbox on macOS, two full fixing loops) |
 | One non-JavaScript live run on the current version | Met (2026-11-23: a Python fixture) |
 | A fixing run on a real library, with the fixes judged independently | Met once (negotiator: 2 of 3 fixes real, 1 debatable); more than one library would be stronger |
