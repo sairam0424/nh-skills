@@ -8,6 +8,8 @@ A small, curated collection of [Claude Code Agent Skills](https://docs.claude.co
 
 The current release, **v0.2.1**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
 
+Documentation: [safety and threat model](docs/safety.md), [troubleshooting and FAQ](docs/troubleshooting.md), [tester guide](docs/tester-guide.md), [changelog](CHANGELOG.md).
+
 ## nh-chaos-monkey
 
 An adversarial bug-finding loop for code you own. Agents try to break one module inside a throwaway git worktree. A break only counts when a reproducer fails twice, a fix only counts when a fresh verifier re-checks it against your own test command, and you decide what gets merged. Despite the name it attacks *code under test*; it never kills servers or injects faults into running services.
@@ -42,7 +44,22 @@ A confirmed break proves a behaviour, not that your documentation forbids it. Re
 
 ## Installing
 
-Two routes. Both install the same folder, [`nh-chaos-monkey/`](nh-chaos-monkey): `SKILL.md`, `references/`, `scripts/` and a maintainer journal, `learning.md`, which the skill does not need.
+Three routes. All install the same folder, [`nh-chaos-monkey/`](nh-chaos-monkey): `SKILL.md`, `references/`, `scripts/` and a maintainer journal, `learning.md`, which the skill does not need. The plugin adds no hooks, MCP servers, commands or monitors.
+
+**As a Claude Code plugin**, in one command (Claude Code's documentation puts the minimum at 2.1.275 for the in-session command; it then asks you to confirm the marketplace and choose a scope):
+
+```text
+/plugin install nh-chaos-monkey --marketplace sairam0424/nh-skills
+```
+
+or in two (the shell form `claude plugin install ... --marketplace` needs 2.1.292; `claude plugin install --help` shows whether your Claude Code has the option):
+
+```text
+/plugin marketplace add sairam0424/nh-skills
+/plugin install nh-chaos-monkey@nh-skills
+```
+
+This route follows the repository's default branch and is not pinned to a release. No existing tag contains the plugin manifests; Claude Code's documentation says `sairam0424/nh-skills#vX.Y.Z` pins a tag, which will work from the first release that includes them (not tested). Claude Code installs a new copy only when the plugin's `version` changes, which each release does. Claude Code namespaces a plugin's skills, so you run `/nh-chaos-monkey:nh-chaos-monkey` where the rest of this README says `/nh-chaos-monkey`. The install and `claude plugin validate` were run in an isolated Claude Code configuration from a local path, which loads the files in place; the GitHub route and a version bump were not run, the command name comes from the validator's output, and no loop has been run through this route.
 
 **By copying the folder** from a tagged release, which pins what you install:
 
@@ -61,9 +78,45 @@ npx skills add sairam0424/nh-skills --skill nh-chaos-monkey -a claude-code
 
 This installs into the current project (add `-y` to skip its prompts, or `-g` to make the skill available in every project).
 
-Each [release](https://github.com/sairam0424/nh-skills/releases) attaches an archive of the skill folder and its SHA-256, so you can check what you downloaded. Then start Claude Code and run `/nh-chaos-monkey`.
+Then start Claude Code and run `/nh-chaos-monkey` (`/nh-chaos-monkey:nh-chaos-monkey` after a plugin install).
 
 **Read it before you run it.** A skill is text an agent will act on, and this one runs project code and shell commands by design. `SKILL.md` is about 120 lines and the files under `references/` about 560. What actually runs is `scripts/chaos-loop.js` (about 1,200 lines, a script for Claude Code's Workflow tool) and `scripts/sandbox-probe.mjs` (about 240 lines, plain Node using only built-in modules). No human has audited any of it. Independent AI reviewer agents reviewed the skill, and the validator and the tests check its structure and behaviour; see [`loop-design.md`](nh-chaos-monkey/references/loop-design.md) and [`learning.md`](nh-chaos-monkey/learning.md).
+
+### Update
+
+- **Plugin:** `claude plugin marketplace update nh-skills`, then `claude plugin update nh-chaos-monkey`, then start a new session. If it says you are already on the latest version, the plugin's `version` has not changed since you installed.
+- **Copy:** clone the new tag, delete the old folder first (so files the new version dropped do not linger), then copy the new one in.
+- **`skills` CLI:** use that tool's own update command.
+
+Read the [changelog](CHANGELOG.md) before you update: while the version starts with `0.`, arguments and behaviour can change between minor versions.
+
+### Uninstall
+
+- **Plugin:** `claude plugin uninstall nh-chaos-monkey` (add `--scope project` or `--scope local` if you chose that scope when you installed), and `claude plugin marketplace remove nh-skills` if you no longer want the marketplace.
+- **Copy:** delete `~/.claude/skills/nh-chaos-monkey` (or the folder in your project's `.claude/skills`).
+- **`skills` CLI:** use that tool's own remove command.
+
+A run leaves a branch, refs, stash entries, a worktree and a scratch directory behind; see "Cleaning up" below.
+
+### Verify what you downloaded
+
+Each [release](https://github.com/sairam0424/nh-skills/releases) attaches `nh-chaos-monkey-X.Y.Z.tar.gz` and a `.sha256` file, and the release notes repeat the checksum. From the directory holding both files:
+
+```bash
+shasum -a 256 -c nh-chaos-monkey-X.Y.Z.tar.gz.sha256
+```
+
+The checksum shows that the archive matches what was published beside it. It does not show who published it: release tags are unsigned, no commit signing is enforced (squash-merge commits carry GitHub's signature, which shows GitHub made the merge, not who wrote the code), and releases carry no provenance attestation (see "Known Security Considerations" in [`SECURITY.md`](SECURITY.md)). A clone pinned to a tag, read before you run it, is the stronger check.
+
+### Compatibility
+
+| Component | Required | Checked |
+| --- | --- | --- |
+| Claude Code | A release that has the Workflow tool (this README cannot name the first one); for the one-command plugin install, 2.1.275 or later in a session (2.1.292 for the shell form) | 2.1.330 on macOS with Amazon Bedrock as the model provider, for the sandboxed runs of 2026-11-23; the version of the earlier runs was not recorded. A loop has not been run through the plugin route |
+| git | 2.31 or newer | 2.56.1 on macOS when this table was written; the versions the live runs used were not recorded. The 2.31 minimum was not tried on an older git |
+| Node.js | 20 or newer | Node 20 on Ubuntu in CI (unit tests only); a newer Node on macOS for the live runs |
+| OS | macOS or Linux with a POSIX shell | Live runs on one Mac. Linux: CI unit tests, and the probe alone in an Alpine container. Native Windows is not supported; WSL is untested |
+| Other surfaces | Not supported | The skill uses Claude Code-only frontmatter (`argument-hint`, `disable-model-invocation`), and Claude Code's skills documentation says an upload with fields outside the open specification fails with an error, so uploading it to claude.ai or the Skills API is expected to fail (not tried). Other coding agents are untested |
 
 ## Before you run it
 
@@ -136,6 +189,8 @@ The loop is slow and uses many agents. Runs on 2026-11-08 (small projects, five 
 
 ## Safety: what is enforced and what is only requested
 
+The full threat model, blast radius, stop conditions and limitations are in [`docs/safety.md`](docs/safety.md).
+
 - **Checked by the script:** it screens the values agents return (exit statuses, test counts, paths, hashes), refuses unsafe or unknown arguments, requires a linked worktree on a `chaos/*` branch, and halts when its re-run disagrees with the verifier. Those values still come from agent reports, which your session then re-checks.
 - **Only requested:** the prompts forbid pushing, network use and reading outside the worktree, and tell every agent to treat repository and tool text as data. A prompt cannot stop an agent from disobeying. Only an OS-level sandbox does. The final checks by your session are also prompt-driven.
 - **Sandbox:** run the whole session in a container, a VM or an OS sandbox that blocks reads of credential files and writes outside the worktree and scratch directory, with no network for the agents' tools (Claude Code itself still has to reach the model API). [`references/safety-runner.md`](nh-chaos-monkey/references/safety-runner.md) has the recommended runner and a tested setup. Tested: Claude Code's built-in sandbox on macOS, fail-closed and started from a clean environment, where a pre-release build of the v0.2.0 probe (nine credential locations) reported enforced (after it learned to ignore that sandbox's own proxy login) and two full fixing loops ran. That sandbox covers shell commands only; the file tools and the model client are outside it. Not tested: a whole-process sandbox (srt, a container or a VM around the whole session).
@@ -180,7 +235,7 @@ Releases are tagged `vMAJOR.MINOR.PATCH`, and each release's notes list what cha
 
 ## Contributing and support
 
-This is one person's collection, so support is best effort with no SLA; see [`SUPPORT.md`](SUPPORT.md). Bug reports, unclear docs and small fixes are welcome as issues and pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). A new skill should be a focused task with a clear *when to use it* in its `description`, and a skill that shells out or touches the network goes through the security review described in [`AGENTS.md`](AGENTS.md).
+This is one person's collection, so support is best effort with no SLA; see [`SUPPORT.md`](SUPPORT.md) and, for a stopped run or a refused step, [`docs/troubleshooting.md`](docs/troubleshooting.md). If you can try the skill on code you own, the [tester guide](docs/tester-guide.md) says what to run and report. Bug reports, unclear docs and small fixes are welcome as issues and pull requests; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). A new skill should be a focused task with a clear *when to use it* in its `description`, and a skill that shells out or touches the network goes through the security review described in [`AGENTS.md`](AGENTS.md).
 
 To add or change a skill:
 

@@ -15,7 +15,7 @@ that flows down from there.
 | Validator dependency | `js-yaml` | Parses YAML frontmatter for schema checks |
 | Test runner | `node:test` (built-in) | Fixture-based self-tests for the validator, plus the `nh-chaos-monkey` loop harness, sandbox-probe and snapshot tests |
 | CI | GitHub Actions | One validate job (`npm run validate` and `npm test`) on PRs and pushes to `main` that touch a `SKILL.md`, a `scripts/` or `references/` folder, tests, fixtures or the package files, plus a gitleaks secret scan |
-| Packaging/distribution | None (directory layout only) | Third-party installers (`npx skills add`, manual `cp -r`) work off `<skill-name>/SKILL.md` + optional `scripts/`, `references/`, `assets/` — no manifest file needed |
+| Packaging/distribution | None beyond the two Claude Code plugin manifests (`decisions.md`, 2026-11-24); otherwise directory layout only | Third-party installers (`npx skills add`, manual `cp -r`) work off `<skill-name>/SKILL.md` + optional `scripts/`, `references/`, `assets/` — no manifest file needed |
 | License | Apache-2.0 | Decided at the Not-Humans-Lab umbrella level, applied identically across sibling projects |
 
 ## Adoption status
@@ -28,8 +28,8 @@ that flows down from there.
 | node:test | **Adopt** | Built into Node — zero install cost, sufficient for the validator's fixture-based tests and the `nh-chaos-monkey` loop harness |
 | Jest / Vitest / pytest | **Hold** | Explicitly rejected — no dedicated test framework. `node:test` is the whole test suite (validator and `nh-chaos-monkey`). |
 | Bundler (esbuild/webpack/rollup/etc.) | **Hold** | No build step exists or is needed; the validator runs directly as an `.mjs` script |
-| Manifest file (e.g. `skills.json`) | **Hold** | Not needed — directory structure alone (`<skill-name>/SKILL.md`) is sufficient for both `npx skills add` and manual `cp -r` installs |
-| Packaging/distribution tooling | **Hold** | Correct directory layout is the entire distribution mechanism; no additional tooling is in scope |
+| Manifest file (e.g. `skills.json`) | **Hold** (the two Claude Code plugin manifests are the exception) | Not needed — directory structure alone (`<skill-name>/SKILL.md`) is sufficient for both `npx skills add` and manual `cp -r` installs |
+| Packaging/distribution tooling | **Hold** | Correct directory layout, plus the plugin manifests, is the entire distribution mechanism; no additional tooling is in scope |
 
 ## Rationale (non-obvious choices)
 
@@ -45,7 +45,7 @@ that flows down from there.
   parser or pulling in a heavier config-management library, one narrow,
   well-maintained dependency does the one job (parsing frontmatter) the
   validator needs.
-- **No manifest file.** Both installation paths that matter — the
+- **No manifest file of our own** (the Claude Code plugin manifests are the one exception, `decisions.md`, 2026-11-24). Both installation paths that matter — the
   third-party `npx skills add` installer and a manual `cp -r` into
   `~/.claude/skills/` — resolve purely from directory structure
   (`<skill-name>/SKILL.md`). Adding a manifest would be duplicate
@@ -76,7 +76,7 @@ that flows down from there.
 - The validator must stay "dependency-light": one devDependency (`js-yaml`)
   is the ceiling, not a floor to build up from.
 - No packaging/manifest layer may be introduced solely for distribution —
-  directory layout is the distribution mechanism.
+  directory layout is the distribution mechanism, apart from the two Claude Code plugin manifests.
 
 ## Deprecated / Hold list
 
