@@ -6,7 +6,7 @@
 
 A small, curated collection of [Claude Code Agent Skills](https://docs.claude.com/en/docs/claude-code/skills): self-contained `SKILL.md` files (Markdown plus YAML frontmatter) that teach Claude Code to do one task well. `nh` is just the author's prefix. There is no build step and no package to install to use a skill.
 
-The current release, **v0.2.1**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
+The current release, **v0.2.2**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
 
 Documentation: [safety and threat model](docs/safety.md), [troubleshooting and FAQ](docs/troubleshooting.md), [tester guide](docs/tester-guide.md), [changelog](CHANGELOG.md).
 
@@ -64,7 +64,7 @@ This route follows the repository's default branch and is not pinned to a releas
 **By copying the folder** from a tagged release, which pins what you install:
 
 ```bash
-git clone --depth 1 --branch v0.2.1 https://github.com/sairam0424/nh-skills.git
+git clone --depth 1 --branch v0.2.2 https://github.com/sairam0424/nh-skills.git
 mkdir -p ~/.claude/skills                                  # or <your-project>/.claude/skills
 cp -r nh-skills/nh-chaos-monkey ~/.claude/skills/
 ls ~/.claude/skills/nh-chaos-monkey/SKILL.md               # must exist, one level below skills/
