@@ -8,6 +8,7 @@ How to run the loop so a hostile repository cannot reach the user's machine, how
 - What Claude Code's own sandbox does and does not cover
 - Recommended runner
 - A tested setup: Claude Code's built-in sandbox (macOS)
+- What a project may need allowed inside the sandbox
 - The preflight probe
 - Git worktree hazards
 - Prompt injection
@@ -60,7 +61,7 @@ Settings, passed with `--settings` (the paths are examples):
 }
 ```
 
-The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings below are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The roots added in v0.2.1 were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
+The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings in the example above are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The 22 sessions of 2026-11-24 and 25 denied reads of the folders and files that hold the 15 locations the probe opens (13 roots) plus `~/.claude.json` and `~/.claude/settings.json`; the extra credential files named in this paragraph were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
 
 How it was run:
 
@@ -71,7 +72,44 @@ How it was run:
 
 What a pre-release build of the v0.2.0 probe (nine credential locations) reported inside it: **enforced**, with every write, credential and network probe blocked. The sandbox puts the login for its own loopback proxy into every shell (the proxy password variable, also embedded in `HTTPS_PROXY`, `HTTP_PROXY` and `ALL_PROXY`). The probe ignores that password only when `SANDBOX_RUNTIME` is `1`, `CLOUDSDK_PROXY_ADDRESS` is a loopback address and `:<password>@` appears in `HTTPS_PROXY`, `HTTP_PROXY` or `ALL_PROXY`, and prints that it did. That is a string match, not proof of origin: code that can set those variables can make the probe ignore a value it chose, so the verdict stays evidence, not a guarantee.
 
-Limits: the dependency install cannot run inside it because there is no network. At Step 2 item 6 an interactive session says so and lets you install in the worktree yourself, from your own shell, or knowingly open the network for that one step and re-run the probe afterwards (this interactive path was not tested); a non-interactive session prints the install command and stops, so use an interactive session for a project that needs an install. A sandbox that allows only your package registry would also let the install run, but that setup was not tested and a registry host is itself a network path out. The file tools and the model client are outside the sandbox, so the verdict says nothing about what the loop's agents do through them; the final checks by your session are the backstop. Linux (bubblewrap) and Windows were not tested.
+Limits: the dependency install cannot run inside it because there is no network. At Step 2 item 6 an interactive session says so and lets you install in the worktree yourself, from your own shell, or knowingly open the network for that one step and re-run the probe afterwards (this interactive path was not tested); a non-interactive session prints the install command and stops, so use an interactive session for a project that needs an install. A sandbox that allows only your package registry lets the install run: one headless session did this on a small Node project (2026-11-24: 7 packages from the lockfile, the probe enforced before and after). The registry host stays reachable for the rest of the session, including while the judge and the reproducers run, so use it only for code you trust. The file tools and the model client are outside the sandbox, so the verdict says nothing about what the loop's agents do through them; the final checks by your session are the backstop. Linux (bubblewrap) and Windows were not tested.
+
+## What a project may need allowed inside the sandbox
+
+A run in this sandbox stops at the baseline when the project's own tests need something the sandbox refuses. The stop is correct and leaves behind a worktree, a branch, a scratch directory and a snapshot file of your git state (nothing is merged or pushed), but it does not say what to allow. These are the cases seen when the published v0.2.2 plugin was run on eight real projects (22 headless sessions, 2026-11-24, Claude Code 2.1.331, macOS), with what made each work. The raw session records behind these rows are kept by the maintainer and are not in this repository. Grant the least that works, in the settings file, and say so in the report. None of this is a guarantee for your project.
+
+| What the tests need | What was seen | What allowed it |
+| --- | --- | --- |
+| A local server on loopback | Connection or permission errors; 14 of 445 tests failed in one project | `"network": { "allowLocalBinding": true }`. Public hosts stay blocked and the probe still reports the network check as blocked. A loopback listener is reachable by everything else that listens on loopback (databases, dev servers, a local Docker port, agents), so allow it only where nothing sensitive does |
+| A unix socket (an SSH-agent test) | `listen unix ...: bind: operation not permitted`; 36 tests of one Go project | `"allowUnixSockets": ["/private/tmp/short-dir"]` under `network`, the same folder under `filesystem.allowWrite`, and `TMPDIR=/private/tmp/short-dir` in front of the judge. The folder must be new, empty and made for this run, never one that already holds other sockets (an SSH agent's, Docker's). Keep the path short: a socket path over about 100 characters fails on macOS |
+| Tests that start `sandbox-exec` themselves | Red baseline: macOS cannot nest a Seatbelt sandbox | Nothing allows it. Excluding those tests by name narrows the judge, which is your decision, and the report must say which tests were left out |
+| A hard-coded `/tmp` path | 64 of 155 checks failed with `/tmp` unwritable | Allow `/private/tmp` (broad) or change the test; choose knowingly. If your worktree also lives under `/private/tmp` (next row), allowing it makes the probe's write-outside-workdir check pass and the probe reports not-enforced, so use a different parent directory for the worktree |
+| A test that rejects home-directory paths | A linked worktree's `.git` file holds the repository's absolute path, so one test failed in every worktree under `/Users/...` | Put the clone and the worktree outside your home directory, for example under `/private/tmp` |
+| Docker or testcontainers | 8 to 9 packages red offline | Do not give the sandbox the Docker socket: it is root on the host. If the project documents no subset without Docker, the loop correctly has no judge |
+| An offline toolchain | Go builds fail without a cache, Python imports fail without the dependencies, Node tests fail without `node_modules` | Go: `GOCACHE=<scratch>/gocache GOMODCACHE=<pre-filled> GOFLAGS=-mod=readonly GOPROXY=off` in front of the judge (breakers copy those assignments into their reproducers); Python: a virtualenv outside the clone and `--repro-runner <venv>/bin/python`; Node: `node_modules` in a parent directory of the worktree. Keep pre-filled caches and virtualenvs read-only for the session and do not share a writable one between concurrent runs |
+| `--allow-install` | `npm ci` failed with ENOTFOUND under `env -i` | List only the registry host in `allowedDomains` and pass the sandbox's proxy variables through the scrub (SKILL.md, Step 2 item 6). One run did this and installed 7 packages from the lockfile; the host stays reachable until the session ends |
+
+### One settings file for a Python project that needs loopback and a unix socket
+
+The tested form is a headless session started with `--settings <file> --setting-sources project,local`; an interactive session would put the same keys in `.claude/settings.local.json`, which was not tried. Claude Code's sandbox does not deny credential reads by itself, so without the `denyRead` list the probe finds the credential files readable and the skill stops. Create the three directories first and empty, because the skill otherwise picks names the sandbox would not let it write to: a worktree directory, a scratch directory and a short folder for sockets, all outside your home directory if a test rejects home paths.
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d"],
+      "allowWrite": ["/private/tmp/nh-wt", "/private/tmp/nh-scratch", "/private/tmp/nh-sock", "/path/to/clone/.git"],
+      "denyWrite": ["/path/to/clone/.git/hooks", "/path/to/clone/.git/config"]
+    },
+    "network": { "allowedDomains": [], "allowLocalBinding": true, "allowUnixSockets": ["/private/tmp/nh-sock"] }
+  }
+}
+```
+
+Then give the session these as your answers to Step 1, in the prompt: the worktree directory, the scratch directory, the judge (for example `TMPDIR=/private/tmp/nh-sock PYTHONPATH=src /path/to/venv/bin/python -m pytest -q`) and `--repro-runner /path/to/venv/bin/python`. Folders below an allowed socket folder are covered: the Go run that worked created its sockets in temporary folders below it.
 
 ## The preflight probe
 
