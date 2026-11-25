@@ -4,9 +4,12 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-11-26
+
 ### Changed
 
-- Branding: the README, the marketplace description and the package metadata now present the project as Not-Humans skills for Claude Code (`nh` stands for Not-Humans), and the README carries a small Not-Humans mark at the top and the bottom. Names, install commands and behaviour are unchanged; nothing inside `nh-chaos-monkey/` changed, so there is no new release.
+- Branding (#38, already on `main`): the README, the marketplace description and the package metadata present the project as Not-Humans skills for Claude Code (`nh` stands for Not-Humans), and the README carries a small Not-Humans mark at the top and the bottom.
+- `nh-chaos-monkey/.claude-plugin/plugin.json`: the description now starts "A Not-Humans skill for Claude Code" and the keywords gain `not-humans`. No instruction, script, reference or behaviour changed; the version moves only because Claude Code installs a new copy of a plugin only when its `version` changes, and the new metadata reaches installed copies that way. Names and install commands are unchanged.
 
 ## [0.2.4] - 2026-11-25
 
@@ -96,7 +99,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 - First public release, with one skill, `nh-chaos-monkey`: a loop in a git worktree on a `chaos/*` branch with breaker agents per lens, a confirmer that runs every reproducer twice, a separate fixer that adds a regression test, a fresh verifier and an independent re-run of the judge after each round that made commits.
 - A fault-injection lens that must show evidence the fault fired, a sandbox probe with a `requireSandbox` gate, a non-interactive contract for `claude -p`, caps that default low, and a validator and test harness (264 passing results in CI).
 
-[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/sairam0424/nh-skills/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/sairam0424/nh-skills/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/sairam0424/nh-skills/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/sairam0424/nh-skills/compare/v0.2.1...v0.2.2
