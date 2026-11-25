@@ -8,7 +8,7 @@
 
 **Not-Humans** skills for Claude Code: a small, curated collection of self-contained [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) (`SKILL.md` files, Markdown plus YAML frontmatter) that teach Claude Code to do one task well. `nh` stands for Not-Humans. There is no build step and no package to install to use a skill. The one skill shipped so far, `nh-chaos-monkey`, is not only Markdown: it carries a JavaScript script for Claude Code's Workflow tool and a small Node probe, and it runs your project's code, so read the section "Read it before you run it" before you install it.
 
-The current release, **v0.2.4**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
+The current release, **v0.2.5**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
 
 Documentation: [safety and threat model](docs/safety.md), [troubleshooting and FAQ](docs/troubleshooting.md), [tester guide](docs/tester-guide.md), [changelog](CHANGELOG.md).
 
@@ -61,12 +61,12 @@ or in two (the shell form `claude plugin install ... --marketplace` needs 2.1.29
 /plugin install nh-chaos-monkey@nh-skills
 ```
 
-Both commands above follow the repository's default branch. To fix a release, pin the tag: `/plugin marketplace add sairam0424/nh-skills#v0.2.4` then `/plugin install nh-chaos-monkey@nh-skills`, or `/plugin install nh-chaos-monkey --marketplace sairam0424/nh-skills#v0.2.4`. The same two forms installed version 0.2.3 at the tag's commit for `#v0.2.3` (route check of 2026-11-25, Claude Code 2.1.332) and 0.2.2 for `#v0.2.2`, and are re-checked for v0.2.4 in its own route check; tags before v0.2.2 carry no plugin files, so pinning one fails. Claude Code installs a new copy only when the plugin's `version` changes, which each release does. Claude Code namespaces a plugin's skills, so you run `/nh-chaos-monkey:nh-chaos-monkey` where the rest of this README says `/nh-chaos-monkey`. Install, list, uninstall and `claude plugin validate` were run in isolated Claude Code configurations (2.1.331), from a local path and from GitHub, in both the one-command and the two-step form; the published v0.2.2 plugin was also installed from GitHub (two-step, one-command and tag-pinned) and `claude plugin update` said it was up to date; a fixing loop was run through it on a small fixture and later in 22 sessions on eight projects (see the table below); a version bump to a newer release has not been tried.
+Both commands above follow the repository's default branch. To fix a release, pin the tag: `/plugin marketplace add sairam0424/nh-skills#v0.2.5` then `/plugin install nh-chaos-monkey@nh-skills`, or `/plugin install nh-chaos-monkey --marketplace sairam0424/nh-skills#v0.2.5`. The same two forms installed version 0.2.3 at the tag's commit for `#v0.2.3` (route check of 2026-11-25, Claude Code 2.1.332) and 0.2.2 for `#v0.2.2`, and are re-checked for v0.2.5 in its own route check; tags before v0.2.2 carry no plugin files, so pinning one fails. Claude Code installs a new copy only when the plugin's `version` changes, which each release does. Claude Code namespaces a plugin's skills, so you run `/nh-chaos-monkey:nh-chaos-monkey` where the rest of this README says `/nh-chaos-monkey`. Install, list, uninstall and `claude plugin validate` were run in isolated Claude Code configurations (2.1.331), from a local path and from GitHub, in both the one-command and the two-step form; the published v0.2.2 plugin was also installed from GitHub (two-step, one-command and tag-pinned) and `claude plugin update` said it was up to date; a fixing loop was run through it on a small fixture and later in 22 sessions on eight projects (see the table below); a version bump to a newer release has not been tried.
 
 **By copying the folder** from a tagged release, which pins what you install:
 
 ```bash
-git clone --depth 1 --branch v0.2.4 https://github.com/sairam0424/nh-skills.git
+git clone --depth 1 --branch v0.2.5 https://github.com/sairam0424/nh-skills.git
 SKILLS=~/.claude/skills                                    # or "$PWD/.claude/skills" to install into one project only
 mkdir -p "$SKILLS"
 cp -r nh-skills/nh-chaos-monkey "$SKILLS"/

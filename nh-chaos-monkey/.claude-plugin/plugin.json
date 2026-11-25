@@ -1,10 +1,10 @@
 {
   "name": "nh-chaos-monkey",
-  "version": "0.2.4",
-  "description": "A bounded loop where agents try to break code you own in a throwaway git worktree: every break needs a failing reproducer, every fix a regression test and a fresh verifier, and you decide what merges.",
+  "version": "0.2.5",
+  "description": "A Not-Humans skill for Claude Code: a bounded loop where agents try to break code you own in a throwaway git worktree. Every break needs a failing reproducer, every fix a regression test and a fresh verifier, and you decide what merges.",
   "author": { "name": "sairam0424", "url": "https://github.com/sairam0424" },
   "homepage": "https://github.com/sairam0424/nh-skills#readme",
   "repository": "https://github.com/sairam0424/nh-skills",
   "license": "Apache-2.0",
-  "keywords": ["chaos-testing", "fault-injection", "testing", "agent-skill", "claude-code"]
+  "keywords": ["chaos-testing", "fault-injection", "testing", "agent-skill", "claude-code", "not-humans"]
 }

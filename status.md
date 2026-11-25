@@ -40,6 +40,7 @@ for the full rationale.
 
 ## Recent Progress
 
+- 2026-11-26: v0.2.5 prepared (branding, PR #38 merged, then the release PR): the plugin's own description and keywords carry the Not-Humans wording; no instruction or script change.
 - 2026-11-25: v0.2.3 released (PRs #33, #34; tag v0.2.3). v0.2.4 prepared (PR #36 merged): both settings examples deny reads of Claude Code's own settings files, and the SKILL.md line that said not for unattended runs now says a headless run with its contract supplied is supported.
 - 2026-11-25: v0.2.3 prepared (PR #33 merged). Fixes from running v0.2.2 on eight real projects: the false breakers-blocked and rejudge halts, fixers use git archive instead of git stash, the judge's environment reaches the breakers, five input validations, the sandbox-allowance table and worked settings file. Evidence in nh-chaos-monkey/learning.md.
 - 2026-11-24: v0.2.2 prepared (PRs #29, #30 merged). The Claude Code plugin manifests and the first-user documents (safety, troubleshooting, tester guide, changelog, tester report form); a confirm gate so that a break only counts when its reproducer runs the project's code and the project's own documents do not accept the behaviour; `--repro-runner` for an interpreter outside the worktree; two new halts that are not a plateau; and no stop on the four standard git-lfs lines. 338 tests pass. Released only on the owner's go.
