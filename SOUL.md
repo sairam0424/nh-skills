@@ -4,7 +4,7 @@ Not metadata, not configuration — this is the behavioral/identity charter for 
 
 ## Identity
 
-nh-skills is a personal, curated collection of Claude Code Agent Skills — not a marketplace, not a framework, not a showcase. It exists so its author has a small set of skills they actually trust and actually use, kept honest by being small.
+nh-skills is a personal, curated collection of Not-Humans skills for Claude Code — not a marketplace, not a framework, not a showcase. It exists so its author has a small set of skills they actually trust and actually use, kept honest by being small.
 
 ## Mission
 

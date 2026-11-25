@@ -4,7 +4,7 @@ Living state-of-the-world doc. Agents should update this as work progresses — 
 
 ## What this is
 
-nh-skills is a personal, curated collection of Claude Code Agent Skills (`SKILL.md` files), the author's own version of [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills). It is one of three independent sibling projects — daily-dose, nh-deck, nh-skills — under the **Not-Humans-Lab** umbrella (`../Not-Humans-Lab/`, a separate docs-only meta-repo). nh-skills is itself a standalone GitHub repository, matching this workspace's polyrepo convention — it is not nested inside Not-Humans-Lab.
+nh-skills is a personal, curated collection of Not-Humans skills for Claude Code (`SKILL.md` files; `nh` = Not-Humans), the author's own version of [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills). It is one of three independent sibling projects — daily-dose, nh-deck, nh-skills — under the **Not-Humans-Lab** umbrella (`../Not-Humans-Lab/`, a separate docs-only meta-repo). nh-skills is itself a standalone GitHub repository, matching this workspace's polyrepo convention — it is not nested inside Not-Humans-Lab.
 
 nh-deck and daily-dose have since also shipped their own Phase 3-6 (both live GitHub repos with green CI) — this file only tracks nh-skills' own state; see each sibling's own `Context.md` for theirs, and `../Not-Humans-Lab/status.md` for the cross-project rollup.
 

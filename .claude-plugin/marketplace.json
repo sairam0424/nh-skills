@@ -1,14 +1,14 @@
 {
   "name": "nh-skills",
   "owner": { "name": "sairam0424", "url": "https://github.com/sairam0424" },
-  "metadata": { "description": "Claude Code Agent Skills. Currently one skill, nh-chaos-monkey, a bounded chaos-monkey loop for code you own." },
+  "metadata": { "description": "Not-Humans skills for Claude Code. Currently one skill, nh-chaos-monkey, a bounded chaos-monkey loop for code you own." },
   "plugins": [
     {
       "name": "nh-chaos-monkey",
       "source": "./nh-chaos-monkey",
-      "description": "A bounded loop where agents try to break code you own in a throwaway git worktree; you decide what merges.",
+      "description": "A Not-Humans skill for Claude Code: a bounded loop where agents try to break code you own in a throwaway git worktree; you decide what merges.",
       "license": "Apache-2.0",
-      "keywords": ["chaos-testing", "fault-injection", "testing"]
+      "keywords": ["chaos-testing", "fault-injection", "testing", "not-humans"]
     }
   ]
 }

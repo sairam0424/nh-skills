@@ -4,7 +4,7 @@ This file follows the vendor-neutral [AGENTS.md](https://agents.md) open specifi
 
 ## Overview
 
-nh-skills is a personal, curated collection of [Claude Code Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) — `SKILL.md` files with YAML frontmatter, one directory per skill. It is the author's own version of [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills).
+nh-skills is a personal, curated collection of Not-Humans skills for Claude Code (`nh` = Not-Humans), built as [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) — `SKILL.md` files with YAML frontmatter, one directory per skill. It is the author's own version of [arpitbbhayani/ape-skills](https://github.com/arpitbbhayani/ape-skills).
 
 nh-skills is one of three independent sibling projects (daily-dose, nh-deck, nh-skills) under the **Not-Humans-Lab** umbrella. Not-Humans-Lab (`../Not-Humans-Lab/`) is a docs-only meta-repo holding cross-cutting system-level decisions (license, branch strategy, testing skeleton). This repo is its own standalone GitHub repository — not nested inside Not-Humans-Lab — and is the source of truth for everything specific to nh-skills. Cross-cutting conventions are linked by relative path, never duplicated:
 

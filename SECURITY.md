@@ -1,6 +1,6 @@
 # Security Policy
 
-nh-skills is a personal, curated collection of Claude Code Agent Skills
+nh-skills is a personal, curated collection of Not-Humans skills for Claude Code
 (`SKILL.md` files plus optional `scripts/`, `references/`, and `assets/`
 alongside each). Because skill bodies are natural-language instructions that
 an agent will read and act on, and because skills can bundle executable
