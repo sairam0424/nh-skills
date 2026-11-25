@@ -4,6 +4,14 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+### Fixed
+
+- `references/safety-runner.md`: both settings examples now deny reads of `~/.claude.json` and `~/.claude/settings.json`. Every tested session denied them and the probe does not check them, but the example a reader would paste left them readable (found by a first-time read of v0.2.3). A new test keeps both entries in both examples.
+
+### Changed
+
+- `SKILL.md`, "When this fits": "not for unattended runs" is replaced by "not for a run whose contract nobody has set ... a headless run with those arguments is supported; a headless run that has to guess them is not". The old line contradicted the documented headless route (Step 1, non-interactive use; the safety and troubleshooting pages). A trial of old and new wording on three scenarios tied (15 of 15 decisions as intended in each arm), so this removes a contradiction the reader saw and does not change what the skill does.
+
 ## [0.2.3] - 2026-11-25
 
 ### Fixed

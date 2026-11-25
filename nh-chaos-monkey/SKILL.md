@@ -14,7 +14,7 @@ A bug an agent reports is a claim. This skill turns claims into evidence: a brea
 - The code has an executable judge: a documented test command that exits non-zero on failure and runs at least one counted test.
 - The user owns the code. Reproducers and tests execute project code, so a sandbox matters (Step 1).
 - Even a lead-only run (fixEnabled false) needs a green judge with counted tests, because the baseline is the steady state every break is measured against. No usable judge means the loop cannot start; find or write a test command first. Lead-only mode keeps the proven breaks and fixes nothing.
-- Not for faults in running services or networks (use a chaos platform with a human-owned experiment), not for production or third-party targets, and not for unattended runs: the user confirms the contract first, either in Step 1 or by passing it all on the command line (see Step 1, non-interactive use).
+- Not for faults in running services or networks (use a chaos platform with a human-owned experiment), not for production or third-party targets, and not for a run whose contract nobody has set: the user has to supply the target and the judge and to confirm the sandbox, either in Step 1 or by passing it all on the command line (see Step 1, non-interactive use). A headless run with those arguments is supported; a headless run that has to guess them is not.
 
 ## What is enforced and what is only requested
 
