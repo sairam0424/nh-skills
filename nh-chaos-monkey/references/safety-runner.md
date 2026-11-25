@@ -52,7 +52,7 @@ Settings, passed with `--settings` (the paths are examples):
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "filesystem": {
-      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d"],
+      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d", "~/.claude.json", "~/.claude/settings.json"],
       "allowWrite": ["/path/to/worktree", "/path/to/scratch", "/path/to/repo/.git"],
       "denyWrite": ["/path/to/repo/.git/hooks", "/path/to/repo/.git/config"]
     },
@@ -61,7 +61,7 @@ Settings, passed with `--settings` (the paths are examples):
 }
 ```
 
-The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings in the example above are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The 22 sessions of 2026-11-24 and 25 denied reads of the folders and files that hold the 15 locations the probe opens (13 roots) plus `~/.claude.json` and `~/.claude/settings.json`; the extra credential files named in this paragraph were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
+The deny list is a superset of the 15 locations the probe opens, and a test keeps it that way. Credential files the probe does not open but a sandbox should also deny: `~/.gem/credentials` and `~/.local/share/gem/credentials` (RubyGems), `~/.m2/settings.xml` and `settings-security.xml` (Maven), `~/.config/helm/registry/config.json`, `~/.oci`, `~/.config/doctl`, `~/.config/git/credentials` and `~/.pgpass` (`~/.aws/sso/cache` is already under `~/.aws`). The settings in the example above are the recommended list. The tested runs denied reads of credential folders; the journal does not record the exact list, and the v0.2.0 example held eight roots plus `~/.git-credentials`. The 22 sessions of 2026-11-24 and 25 denied reads of the folders and files that hold the 15 locations the probe opens (13 roots) and of `~/.claude.json` and `~/.claude/settings.json`, which hold Claude Code's own account and settings data and which the probe does not check; the list in the example now includes both. The extra credential files named in this paragraph were not part of any run. `~/.cargo` is not denied as a whole because it holds the toolchain proxies (`~/.cargo/bin`) a Rust judge needs.
 
 How it was run:
 
@@ -100,7 +100,7 @@ The tested form is a headless session started with `--settings <file> --setting-
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
     "filesystem": {
-      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d"],
+      "denyRead": ["~/.ssh", "~/.aws", "~/.npmrc", "~/.netrc", "~/.config/gh", "~/.kube", "~/.docker", "~/.config/gcloud", "~/.git-credentials", "~/.azure", "~/.pypirc", "~/.cargo/credentials.toml", "~/.cargo/credentials", "~/.terraform.d", "~/.claude.json", "~/.claude/settings.json"],
       "allowWrite": ["/private/tmp/nh-wt", "/private/tmp/nh-scratch", "/private/tmp/nh-sock", "/path/to/clone/.git"],
       "denyWrite": ["/path/to/clone/.git/hooks", "/path/to/clone/.git/config"]
     },
