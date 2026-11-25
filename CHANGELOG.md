@@ -4,6 +4,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-25
+
 ### Fixed
 
 - `references/safety-runner.md`: both settings examples now deny reads of `~/.claude.json` and `~/.claude/settings.json`. Every tested session denied them and the probe does not check them, but the example a reader would paste left them readable (found by a first-time read of v0.2.3). A new test keeps both entries in both examples.
@@ -90,7 +92,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 - First public release, with one skill, `nh-chaos-monkey`: a loop in a git worktree on a `chaos/*` branch with breaker agents per lens, a confirmer that runs every reproducer twice, a separate fixer that adds a regression test, a fresh verifier and an independent re-run of the judge after each round that made commits.
 - A fault-injection lens that must show evidence the fault fired, a sandbox probe with a `requireSandbox` gate, a non-interactive contract for `claude -p`, caps that default low, and a validator and test harness (264 passing results in CI).
 
-[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/sairam0424/nh-skills/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/sairam0424/nh-skills/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/sairam0424/nh-skills/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/sairam0424/nh-skills/compare/v0.2.0...v0.2.1
