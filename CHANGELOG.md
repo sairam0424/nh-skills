@@ -4,6 +4,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-25
+
 ### Fixed
 
 - A round in which every breaker ran the code and found nothing should be a plateau again (checked by deterministic tests and a live replay of the original scenario, which stopped on `plateau` after a quiet round 2; see `learning.md`). Breakers wrote "No defect found" into the optional `blocked` field and the loop stopped with `breakers-blocked` ("nothing was tested"). Breakers now set `ranProjectCode`; `blocked` counts only when they did not run the code, and a no-defect sentence without the flag no longer counts.
@@ -80,7 +82,8 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 - First public release, with one skill, `nh-chaos-monkey`: a loop in a git worktree on a `chaos/*` branch with breaker agents per lens, a confirmer that runs every reproducer twice, a separate fixer that adds a regression test, a fresh verifier and an independent re-run of the judge after each round that made commits.
 - A fault-injection lens that must show evidence the fault fired, a sandbox probe with a `requireSandbox` gate, a non-interactive contract for `claude -p`, caps that default low, and a validator and test harness (264 passing results in CI).
 
-[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/sairam0424/nh-skills/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/sairam0424/nh-skills/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/sairam0424/nh-skills/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/sairam0424/nh-skills/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/sairam0424/nh-skills/compare/v0.1.0...v0.2.0
