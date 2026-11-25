@@ -1,7 +1,7 @@
 # Support
 
-nh-skills is a personal, curated collection of Claude Code Agent Skills. It
-is maintained by one person in spare time. Support here is **best effort,
+nh-skills is a personal, curated collection of Not-Humans skills for Claude Code.
+It is maintained by one person in spare time. Support here is **best effort,
 with no SLA** — please calibrate expectations accordingly. If you need
 guaranteed response times, this project is not the right dependency for
 that.

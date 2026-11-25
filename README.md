@@ -1,10 +1,12 @@
+<p align="right"><sub><b>Not-Humans</b> · skills for Claude Code</sub></p>
+
 # nh-skills
 
 [![Validate Skills](https://github.com/sairam0424/nh-skills/actions/workflows/validate-skills.yml/badge.svg)](https://github.com/sairam0424/nh-skills/actions/workflows/validate-skills.yml)
 [![Secret Scan](https://github.com/sairam0424/nh-skills/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/sairam0424/nh-skills/actions/workflows/gitleaks.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A small, curated collection of [Claude Code Agent Skills](https://docs.claude.com/en/docs/claude-code/skills): self-contained `SKILL.md` files (Markdown plus YAML frontmatter) that teach Claude Code to do one task well. `nh` is just the author's prefix. There is no build step and no package to install to use a skill. The one skill shipped so far, `nh-chaos-monkey`, is not only Markdown: it carries a JavaScript script for Claude Code's Workflow tool and a small Node probe, and it runs your project's code, so read the section "Read it before you run it" before you install it.
+**Not-Humans** skills for Claude Code: a small, curated collection of self-contained [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) (`SKILL.md` files, Markdown plus YAML frontmatter) that teach Claude Code to do one task well. `nh` stands for Not-Humans. There is no build step and no package to install to use a skill. The one skill shipped so far, `nh-chaos-monkey`, is not only Markdown: it carries a JavaScript script for Claude Code's Workflow tool and a small Node probe, and it runs your project's code, so read the section "Read it before you run it" before you install it.
 
 The current release, **v0.2.4**, ships one skill: **`nh-chaos-monkey`**. [Release notes](https://github.com/sairam0424/nh-skills/releases).
 
@@ -302,3 +304,7 @@ To add or change a skill:
 ## License
 
 [Apache-2.0](LICENSE).
+
+---
+
+<p align="center"><sub>A <b>Not-Humans</b> project, alongside <a href="https://github.com/sairam0424/nh-deck">nh-deck</a> and <a href="https://github.com/sairam0424/daily-dose">daily-dose</a>. Umbrella docs: <a href="https://github.com/sairam0424/not-humans-lab">Not-Humans-Lab</a>.</sub></p>

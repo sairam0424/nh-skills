@@ -11,7 +11,7 @@
 **Health:** 🟢 Stable
 
 nh-skills is an independent, standalone GitHub repository (github.com/sairam0424/nh-skills) — a personal,
-curated collection of Claude Code Agent Skills (`SKILL.md` files), in the
+curated collection of Not-Humans skills for Claude Code (`SKILL.md` files), in the
 spirit of `arpitbbhayani/ape-skills`. It is one of three sibling projects
 (`daily-dose`, `nh-deck`, `nh-skills`) under the "Not-Humans-Lab" umbrella;
 cross-cutting system-level docs for that umbrella live in the separate,

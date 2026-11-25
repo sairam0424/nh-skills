@@ -1,6 +1,6 @@
 # Code of conduct
 
-This is a small, personal project. The standard is simple: be respectful and be useful.
+nh-skills is a small, personal Not-Humans project. The standard is simple: be respectful and be useful.
 
 - Assume good faith, and disagree about ideas, not people.
 - Keep reports and reviews specific: say what you ran, what happened and what you expected.

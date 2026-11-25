@@ -4,6 +4,10 @@ All notable changes to this repository are recorded here, in the [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Branding: the README, the marketplace description and the package metadata now present the project as Not-Humans skills for Claude Code (`nh` stands for Not-Humans), and the README carries a small Not-Humans mark at the top and the bottom. Names, install commands and behaviour are unchanged; nothing inside `nh-chaos-monkey/` changed, so there is no new release.
+
 ## [0.2.4] - 2026-11-25
 
 ### Fixed

@@ -1,6 +1,6 @@
 # Contributing
 
-nh-skills is one person's collection, so contributions are welcome but reviewed on a best-effort basis (see [SUPPORT.md](SUPPORT.md)). The most useful things you can do:
+nh-skills is one person's Not-Humans collection of Claude Code skills, so contributions are welcome but reviewed on a best-effort basis (see [SUPPORT.md](SUPPORT.md)). The most useful things you can do:
 
 - **Run `nh-chaos-monkey` on your own code and report what happened**, good or bad, with the [bug report form](https://github.com/sairam0424/nh-skills/issues/new/choose). The README is only verified for its author so far.
 - **Report unclear or wrong documentation.** A sentence that overclaims is a bug here.

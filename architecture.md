@@ -11,7 +11,7 @@ or is about to exist in Phase 2, not speculative future phases.
 ## Context & Scope
 
 nh-skills is a standalone, independent GitHub repository — a personal,
-curated collection of Claude Code Agent Skills (`SKILL.md` files), matching
+curated collection of Not-Humans skills for Claude Code (`SKILL.md` files), matching
 this workspace's polyrepo convention (it is not nested inside
 Not-Humans-Lab).
 
@@ -28,8 +28,8 @@ Not-Humans-Lab).
    ┌───────────────┐      ┌─────────────────────┐      ┌───────────────┐
    │  nh-deck       │ · · · │      nh-skills       │ · · · │  daily-dose    │
    │  (sibling      │      │  THIS repo:          │      │  (sibling      │
-   │  project,      │      │  curated Claude Code  │      │  project,      │
-   │  own repo)     │      │  Agent Skills +       │      │  own repo)     │
+   │  project,      │      │  Not-Humans skills    │      │  project,      │
+   │  own repo)     │      │  for Claude Code +    │      │  own repo)     │
    └───────────────┘      │  frontmatter validator │      └───────────────┘
                           └──────────┬────────────┘
                                      │
