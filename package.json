@@ -1,6 +1,6 @@
 {
   "name": "nh-skills",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A personal, curated collection of Claude Code Agent Skills (SKILL.md files).",
   "license": "Apache-2.0",
   "private": true,
